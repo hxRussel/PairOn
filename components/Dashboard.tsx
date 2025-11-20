@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthState, Language } from '../types';
-import { Home, Smartphone, Scale, Settings, User, Plus, Battery, Cpu } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu } from 'lucide-react';
 import { auth } from '../services/firebase';
 
 interface DashboardProps {
@@ -35,14 +35,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setAuthState, language }) => {
       subtitle: "Ecco la tua collezione.",
       empty: "Non hai ancora salvato nessuno smartphone.",
       add: "Aggiungi",
-      nav: ["Home", "Salvati", "Confronta", "Opzioni", "Profilo"]
+      nav: ["Home", "Salvati", "Confronta", "AI Advisor", "Opzioni"]
     },
     en: {
       welcome: `Hello,`,
       subtitle: "Here is your collection.",
       empty: "You haven't saved any smartphones yet.",
       add: "Add New",
-      nav: ["Home", "Saved", "Compare", "Settings", "Profile"]
+      nav: ["Home", "Saved", "Compare", "AI Advisor", "Settings"]
     }
   };
 
@@ -51,14 +51,43 @@ const Dashboard: React.FC<DashboardProps> = ({ setAuthState, language }) => {
   return (
     <div className="min-h-screen w-full relative overflow-hidden bg-[#F8F8FF] text-[#08100C] font-sans selection:bg-pairon-mint/30">
       
+      {/* Hidden SVG Definition for Rainbow Gradient */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="rainbow-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF0000" />
+            <stop offset="20%" stopColor="#FFA500" />
+            <stop offset="40%" stopColor="#FFFF00" />
+            <stop offset="60%" stopColor="#008000" />
+            <stop offset="80%" stopColor="#0000FF" />
+            <stop offset="100%" stopColor="#8B00FF" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       {/* Header Section */}
       <header className="pt-12 pb-6 px-6 animate-fade-in">
-        <div className="flex justify-between items-end">
+        <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">{text.welcome} <br/> <span className="text-pairon-indigo">{userName}</span></h2>
+            <h2 className="text-3xl font-bold tracking-tight leading-tight">
+              {text.welcome} <br/> 
+              <span className="text-pairon-indigo">{userName}</span>
+            </h2>
             <p className="text-gray-500 mt-2 text-sm font-medium tracking-wide uppercase opacity-80">{text.subtitle}</p>
           </div>
-          {/* Avatar removed from header */}
+          
+          {/* User Profile Section */}
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-white p-1 shadow-sm border border-gray-100">
+               <div className="w-full h-full rounded-full overflow-hidden bg-pairon-indigo/10 flex items-center justify-center text-pairon-indigo font-bold text-lg">
+                 {auth.currentUser?.photoURL ? (
+                   <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
+                 ) : (
+                   userName.charAt(0).toUpperCase()
+                 )}
+               </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -129,9 +158,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setAuthState, language }) => {
           {[
             { icon: Home, label: text.nav[0] },
             { icon: Smartphone, label: text.nav[1] },
-            { icon: Scale, label: text.nav[2] }, // Center (Compare)
-            { icon: Settings, label: text.nav[3] },
-            { icon: User, label: text.nav[4] }
+            { isLogo: true, label: text.nav[2] }, // Comparison (Center "P")
+            { icon: Sparkles, label: text.nav[3], isAi: true }, // AI Rainbow
+            { icon: Settings, label: text.nav[4] }
           ].map((item, index) => {
             const isActive = activeTab === index;
             
@@ -148,24 +177,21 @@ const Dashboard: React.FC<DashboardProps> = ({ setAuthState, language }) => {
                    <div className="absolute inset-0 bg-white rounded-[1.5rem] -z-10 transition-all duration-300 animate-fade-in"></div>
                 )}
                 
-                {index === 4 ? (
-                  /* Profile Picture for 5th item */
-                  <div className={`w-7 h-7 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-300 ${isActive ? 'scale-110 ring-2 ring-white shadow-sm' : 'scale-100 opacity-70 grayscale'} `}>
-                    {auth.currentUser?.photoURL ? (
-                      <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center bg-pairon-indigo text-white font-bold text-[10px] ${isActive ? '' : 'bg-gray-400'}`}>
-                        {userName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
+                {item.isLogo ? (
+                  <span 
+                    className={`font-display text-2xl transition-transform duration-300 select-none ${isActive ? 'scale-110 bg-gradient-to-br from-pairon-indigo to-pairon-blue bg-clip-text text-transparent' : 'text-gray-400'}`}
+                  >
+                    P
+                  </span>
                 ) : (
                   <item.icon 
-                    size={isActive ? 22 : 22} 
+                    size={isActive ? 24 : 22} 
                     strokeWidth={isActive ? 2.5 : 2}
+                    style={item.isAi ? { stroke: "url(#rainbow-gradient)", fill: isActive ? "rgba(255,255,255,0.1)" : "none" } : {}}
                     className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`}
                   />
                 )}
+                
               </button>
             );
           })}
