@@ -1,7 +1,8 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Language } from '../types';
 
 // Initialize Gemini API client
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getSmartphoneComparison = async (phone1: string, phone2: string, lang: Language = 'it'): Promise<string> => {
@@ -17,7 +18,6 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
       contents: prompt,
       config: {
         temperature: 0.7,
-        maxOutputTokens: 150,
       }
     });
 
@@ -36,7 +36,6 @@ export const getWelcomeMessage = async (lang: Language): Promise<string> => {
       contents: `Generate a short, witty, 1-sentence welcome message for a smartphone comparison app named 'PairOn' in ${langName}.`,
       config: {
         temperature: 0.9,
-        maxOutputTokens: 50,
       }
     });
     return response.text || (lang === 'it' ? "Benvenuto su PairOn!" : "Welcome to PairOn!");
