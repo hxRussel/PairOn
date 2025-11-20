@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
 import { signInWithGoogle } from '../services/firebase';
-import { Eye, EyeOff, Smartphone, ArrowRight, Check, User, Loader as LoaderIcon, AlertCircle, X } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Check, User, Loader as LoaderIcon, AlertCircle, X } from 'lucide-react';
 import { Loader } from './Loader';
 
 interface LoginPageProps {
@@ -85,6 +85,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       feat1: "Analisi basata su AI",
       feat2: "Confronto specifiche in tempo reale",
       googleError: "Errore durante l'accesso con Google. Riprova.",
+      googleBtn: "Accedi con Google"
     },
     en: {
       welcome: "Welcome Back",
@@ -102,6 +103,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       feat1: "AI powered analysis",
       feat2: "Real-time specs comparison",
       googleError: "Error signing in with Google. Please try again.",
+      googleBtn: "Sign in with Google"
     }
   };
 
@@ -156,10 +158,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
         
         {/* Left Side: Brand & Info (Hidden on Mobile) */}
         <div className="hidden lg:flex flex-col items-start max-w-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-pairon-mint to-pairon-blue rounded-xl flex items-center justify-center shadow-lg shadow-pairon-mint/20">
-              <Smartphone className="text-white w-7 h-7" />
-            </div>
+          <div className="flex items-center gap-4 mb-6">
             <h1 className="font-display text-6xl text-transparent bg-clip-text bg-gradient-to-r from-white via-pairon-mint to-pairon-blue tracking-wide">
               PairOn
             </h1>
@@ -198,10 +197,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                  <div className="mb-4">
                     <LanguageToggle language={language} setLanguage={setLanguage} />
                  </div>
-                 <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-pairon-mint to-pairon-blue rounded-lg flex items-center justify-center">
-                      <Smartphone className="text-white w-4 h-4" />
-                    </div>
+                 <div className="flex items-center gap-3 mb-2">
                     <h1 className="font-display text-4xl text-transparent bg-clip-text bg-gradient-to-r from-pairon-mint to-pairon-blue">
                       PairOn
                     </h1>
@@ -316,12 +312,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                       <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                       <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
-                    <span>Google</span>
+                    <span>{text.googleBtn}</span>
                   </>
                 )}
               </button>
 
-              <div className="mt-6 text-center">
+              <div className="mt-8 text-center">
                 <p className="text-slate-400 text-sm">
                   {text.noAccount} {' '}
                   <button 
@@ -335,7 +331,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
 
             </div>
         </div>
-
       </div>
     </div>
   );

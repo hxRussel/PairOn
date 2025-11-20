@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
-import { Eye, EyeOff, Smartphone, ArrowRight, Check } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
 
 interface SignupPageProps {
   setAuthState: (state: AuthState) => void;
@@ -107,10 +107,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
         
         {/* Left Side: Brand & Info */}
         <div className="hidden lg:flex flex-col items-start max-w-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-pairon-mint to-pairon-blue rounded-xl flex items-center justify-center shadow-lg shadow-pairon-mint/20">
-              <Smartphone className="text-white w-7 h-7" />
-            </div>
+          <div className="flex items-center gap-4 mb-6">
             <h1 className="font-display text-6xl text-transparent bg-clip-text bg-gradient-to-r from-white via-pairon-mint to-pairon-blue tracking-wide">
               PairOn
             </h1>
@@ -137,9 +134,11 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
                  <div className="mb-4">
                     <LanguageToggle language={language} setLanguage={setLanguage} />
                  </div>
-                 <h1 className="font-display text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pairon-mint to-pairon-blue inline-block mb-2">
-                  PairOn
-                </h1>
+                 <div className="flex items-center gap-3 mb-2">
+                    <h1 className="font-display text-4xl text-transparent bg-clip-text bg-gradient-to-r from-pairon-mint to-pairon-blue">
+                      PairOn
+                    </h1>
+                 </div>
             </div>
 
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl animate-fade-in">
