@@ -537,7 +537,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 <>
                   <Camera className={isDark ? 'text-gray-500' : 'text-gray-400'} size={32} />
                   <span className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {isReadOnly ? 'No Foto' : 'Foto'}
+                    {isReadOnly ? (language === 'it' ? 'No Foto' : 'No Photo') : (language === 'it' ? 'Foto' : 'Photo')}
                   </span>
                 </>
               )}
@@ -554,7 +554,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 defaultOptions={DEFAULT_BRANDS}
                 isReadOnly={isReadOnly}
                 isDark={isDark}
-                placeholder="es. Samsung, Apple..."
+                placeholder={language === 'it' ? 'es. Samsung, Apple...' : 'e.g. Samsung, Apple...'}
+                language={language}
               />
 
               <div>
@@ -606,7 +607,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
                    {displays.length > 1 && (
                      <h4 className={`text-xs font-bold uppercase tracking-wider mb-4 ${labelColor}`}>
-                        Display {index + 1} {index === 1 ? '(Cover/Secondary)' : ''}
+                        Display {index + 1} {index === 1 ? (language === 'it' ? '(Esterno/Secondario)' : '(Cover/Secondary)') : ''}
                      </h4>
                    )}
 
@@ -620,6 +621,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         isReadOnly={isReadOnly}
                         isDark={isDark}
                         placeholder={language === 'it' ? 'es. LTPO AMOLED' : 'e.g. LTPO AMOLED'}
+                        language={language}
                       />
                       
                       <div>
@@ -752,6 +754,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                           isReadOnly={isReadOnly}
                           isDark={isDark}
                           placeholder={language === 'it' ? 'es. Principale (Wide)' : 'e.g. Main (Wide)'}
+                          language={language}
                         />
                      </div>
                      
@@ -792,7 +795,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className={`p-5 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
                <div className="flex items-center gap-2 mb-4">
                   <Video className={isDark ? 'text-white' : 'text-gray-900'} size={18} />
-                  <h4 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>Video Capabilities</h4>
+                  <h4 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {language === 'it' ? 'Funzionalità Video' : 'Video Capabilities'}
+                  </h4>
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -829,7 +834,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                     onClick={() => !isReadOnly && updateVideo('hasHdr', !videoSettings.hasHdr)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${getToggleBtnStyle(videoSettings.hasHdr)}`}
                   >
-                    <span className="text-xs font-bold uppercase tracking-wider">HDR Video</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">{language === 'it' ? 'Video HDR' : 'HDR Video'}</span>
                     {videoSettings.hasHdr && <Check size={16} strokeWidth={3} />}
                   </div>
 
@@ -856,7 +861,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SmartSelector 
-                label="SoC / Chipset"
+                label={language === 'it' ? 'SoC / Processore' : 'SoC / Chipset'}
                 value={chip}
                 onChange={setChip}
                 optionsCategory="chips"
@@ -864,10 +869,13 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 isReadOnly={isReadOnly}
                 isDark={isDark}
                 placeholder="es. Snapdragon 8 Gen 3"
+                language={language}
               />
               
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>IP Rating</label>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                  {language === 'it' ? 'Certificazione IP' : 'IP Rating'}
+                </label>
                 <input
                   type="text"
                   value={ipRating}
@@ -882,7 +890,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             {/* RAM Section */}
             <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
               <div className="flex justify-between items-center mb-3">
-                <label className={`text-xs font-bold uppercase tracking-wider ${labelColor}`}>RAM Variants</label>
+                <label className={`text-xs font-bold uppercase tracking-wider ${labelColor}`}>
+                  {language === 'it' ? 'Varianti RAM' : 'RAM Variants'}
+                </label>
                 {!isReadOnly && (
                   <button onClick={handleAddRam} className="text-pairon-mint hover:text-white transition-colors">
                     <Plus size={18} />
@@ -911,7 +921,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         defaultOptions={DEFAULT_RAM_TYPES}
                         isReadOnly={isReadOnly}
                         isDark={isDark}
-                        placeholder="Tipo (es. LPDDR5X)"
+                        placeholder={language === 'it' ? 'Tipo (es. LPDDR5X)' : 'Type (e.g. LPDDR5X)'}
+                        language={language}
                       />
                     </div>
                     {!isReadOnly && rams.length > 1 && (
@@ -927,7 +938,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             {/* Storage Section */}
             <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
               <div className="flex justify-between items-center mb-3">
-                <label className={`text-xs font-bold uppercase tracking-wider ${labelColor}`}>Storage Variants</label>
+                <label className={`text-xs font-bold uppercase tracking-wider ${labelColor}`}>
+                  {language === 'it' ? 'Varianti Memoria' : 'Storage Variants'}
+                </label>
                 {!isReadOnly && (
                   <button onClick={handleAddStorage} className="text-pairon-mint hover:text-white transition-colors">
                     <Plus size={18} />
@@ -956,7 +969,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         defaultOptions={DEFAULT_STORAGE_TYPES}
                         isReadOnly={isReadOnly}
                         isDark={isDark}
-                        placeholder="Tipo (es. UFS 4.0)"
+                        placeholder={language === 'it' ? 'Tipo (es. UFS 4.0)' : 'Type (e.g. UFS 4.0)'}
+                        language={language}
                       />
                     </div>
                     {!isReadOnly && storages.length > 1 && (
@@ -1095,7 +1109,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
              <div className="flex items-center gap-2">
               <Activity className="text-pairon-mint" size={20} />
-              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Funzionalità</h3>
+              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {language === 'it' ? 'Funzionalità' : 'Features'}
+              </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1160,6 +1176,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       isReadOnly={isReadOnly}
                       isDark={isDark}
                       placeholder={language === 'it' ? 'es. Sotto il display...' : 'e.g. Under display...'}
+                      language={language}
                     />
                  </div>
                )}
@@ -1193,6 +1210,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       isReadOnly={isReadOnly}
                       isDark={isDark}
                       placeholder={language === 'it' ? 'Seleziona 2D o 3D...' : 'Select 2D or 3D...'}
+                      language={language}
                     />
                  </div>
                )}
@@ -1209,6 +1227,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 isReadOnly={isReadOnly}
                 isDark={isDark}
                 placeholder={language === 'it' ? 'es. Ottima, Motore X-Axis...' : 'e.g. Great, X-Axis Motor...'}
+                language={language}
               />
             </div>
 
@@ -1266,6 +1285,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         isReadOnly={isReadOnly}
                         isDark={isDark}
                         placeholder={language === 'it' ? 'es. One UI 6.1...' : 'e.g. One UI 6.1...'}
+                        language={language}
                       />
                    </div>
                  )}

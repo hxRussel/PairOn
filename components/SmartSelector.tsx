@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Plus, Check } from 'lucide-react';
 import { auth, addCustomOption, subscribeToCustomOptions, CustomOptions } from '../services/firebase';
+import { Language } from '../types';
 
 interface SmartSelectorProps {
   label: string;
@@ -11,6 +12,7 @@ interface SmartSelectorProps {
   isReadOnly?: boolean;
   isDark: boolean;
   placeholder?: string;
+  language: Language;
 }
 
 const SmartSelector: React.FC<SmartSelectorProps> = ({
@@ -21,12 +23,38 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
   defaultOptions,
   isReadOnly = false,
   isDark,
-  placeholder = "Seleziona..."
+  placeholder,
+  language
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [customOptions, setCustomOptions] = useState<string[]>([]);
   
+  // Translations
+  const t = {
+    it: {
+      select: "Seleziona",
+      searchPrefix: "Cerca o aggiungi",
+      add: "Aggiungi",
+      tapSave: "Tocca per salvare e selezionare",
+      noOptions: "Nessuna opzione disponibile.",
+      startTyping: "Inizia a scrivere per aggiungere.",
+      defaultPlaceholder: "Seleziona..."
+    },
+    en: {
+      select: "Select",
+      searchPrefix: "Search or add",
+      add: "Add",
+      tapSave: "Tap to save and select",
+      noOptions: "No options available.",
+      startTyping: "Start typing to add.",
+      defaultPlaceholder: "Select..."
+    }
+  };
+  
+  const text = t[language];
+  const effectivePlaceholder = placeholder || text.defaultPlaceholder;
+
   // Subscribe to user's custom options for this category
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -91,7 +119,7 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
           {value ? (
              <span className={isDark ? 'text-white' : 'text-gray-900'}>{value}</span>
           ) : (
-             <span className={isDark ? 'text-gray-600' : 'text-gray-400'}>{placeholder}</span>
+             <span className={isDark ? 'text-gray-600' : 'text-gray-400'}>{effectivePlaceholder}</span>
           )}
         </div>
       </div>
@@ -104,7 +132,7 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
             {/* Header & Search */}
             <div className={`p-4 border-b ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
               <div className="flex justify-between items-center mb-4">
-                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Seleziona {label}</h3>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{text.select} {label}</h3>
                 <button 
                    onClick={() => setIsOpen(false)}
                    className={`p-2 rounded-full ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
@@ -115,10 +143,9 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
               
               <div className="relative">
                 <Search size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                {/* Removed autoFocus here to prevent keyboard pop-up */}
                 <input 
                   type="text" 
-                  placeholder={`Cerca o aggiungi ${label}...`}
+                  placeholder={`${text.searchPrefix} ${label}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={`w-full pl-10 pr-4 py-3 rounded-xl outline-none border ${isDark ? 'bg-black/30 border-white/10 text-white focus:border-pairon-mint' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-pairon-indigo'}`}
@@ -137,8 +164,8 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
                        <Plus size={16} />
                     </div>
                     <div>
-                       <span className="block text-sm font-bold">Aggiungi "{searchTerm}"</span>
-                       <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Tocca per salvare e selezionare</span>
+                       <span className="block text-sm font-bold">{text.add} "{searchTerm}"</span>
+                       <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{text.tapSave}</span>
                     </div>
                  </button>
               )}
@@ -156,7 +183,7 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
 
               {filteredOptions.length === 0 && !searchTerm && (
                 <div className={`p-8 text-center text-sm ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                  Nessuna opzione disponibile. <br/> Inizia a scrivere per aggiungere.
+                  {text.noOptions} <br/> {text.startTyping}
                 </div>
               )}
             </div>
