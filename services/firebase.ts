@@ -187,6 +187,17 @@ export interface PhoneData {
   
   // Haptics
   haptics: string; 
+
+  // Software
+  os: string;
+  hasCustomUi: boolean;
+  customUi?: string;
+  majorUpdates: string;
+  securityPatches: string;
+
+  // Availability
+  launchDate: string;
+  price: string;
 }
 
 export interface UserSettings {
@@ -203,6 +214,7 @@ export interface CustomOptions {
   faceIdTypes: string[];
   displayTypes: string[];
   cameraTypes: string[];
+  uiVersions: string[]; // New
 }
 
 // Subscribe to the current user's smartphone collection
@@ -280,7 +292,8 @@ export const subscribeToCustomOptions = (userId: string, callback: (options: Cus
         fingerprintTypes: [],
         faceIdTypes: [],
         displayTypes: [],
-        cameraTypes: []
+        cameraTypes: [],
+        uiVersions: []
       });
     }
   });

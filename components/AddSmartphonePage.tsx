@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
 import { Loader } from './Loader';
@@ -61,6 +61,11 @@ const DEFAULT_CAMERA_TYPES = [
   "Macro", 
   "Anteriore (Selfie)",
   "Sensore Profondità"
+];
+
+const DEFAULT_UI_VERSIONS = [
+  "One UI 6.1", "One UI 6.0", "iOS 17", "iOS 18", "HyperOS", "OxygenOS 14", 
+  "ColorOS 14", "OriginOS 4", "MagicOS 8.0", "Pixel UI", "Nothing OS 2.5"
 ];
 
 const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({ 
@@ -138,6 +143,17 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   // Haptics
   const [haptics, setHaptics] = useState('');
 
+  // Software
+  const [os, setOs] = useState('');
+  const [hasCustomUi, setHasCustomUi] = useState(false);
+  const [customUi, setCustomUi] = useState('');
+  const [majorUpdates, setMajorUpdates] = useState('');
+  const [securityPatches, setSecurityPatches] = useState('');
+
+  // Availability
+  const [launchDate, setLaunchDate] = useState('');
+  const [price, setPrice] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Colors helper
@@ -160,10 +176,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       
       // Battery Load
       if (initialData.battery) {
-        // Handle legacy string case just in case, or assume new object structure
-        // Type guard or safe access:
         if (typeof initialData.battery === 'object') {
-          // CLEANUP: Remove "Unknown" if present from old data to show placeholder
+          // CLEANUP: Remove "Unknown" if present
           const cap = initialData.battery.capacity === 'Unknown' ? '' : initialData.battery.capacity;
           setBatteryCapacity(cap);
           
@@ -174,7 +188,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           setHasReverse(initialData.battery.hasReverse);
           setReverseCharging(initialData.battery.reverseCharging || '');
         } else if (typeof initialData.battery === 'string') {
-          // Legacy fallback
           const cap = initialData.battery === 'Unknown' ? '' : initialData.battery;
           setBatteryCapacity(cap);
         }
@@ -183,16 +196,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       // Displays initialization
       if (initialData.displays && initialData.displays.length > 0) {
         setDisplays(initialData.displays);
-      } else {
-        setDisplays([{ 
-          type: '', 
-          size: '', 
-          resolution: '', 
-          refreshRate: '', 
-          brightness: '', 
-          hasHdr: false, 
-          hasDolbyVision: false 
-        }]);
       }
 
       // Cameras initialization
@@ -215,6 +218,17 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       setFaceIdType(initialData.faceIdType || '');
 
       setHaptics(initialData.haptics || '');
+
+      // Software
+      setOs(initialData.os || '');
+      setHasCustomUi(initialData.hasCustomUi || false);
+      setCustomUi(initialData.customUi || '');
+      setMajorUpdates(initialData.majorUpdates || '');
+      setSecurityPatches(initialData.securityPatches || '');
+
+      // Availability
+      setLaunchDate(initialData.launchDate || '');
+      setPrice(initialData.price || '');
     }
   }, [initialData]);
 
@@ -386,6 +400,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       hasFaceId,
       faceIdType: hasFaceId ? faceIdType : '',
       haptics: haptics || (language === 'it' ? 'Non specificato' : 'Not specified'),
+      
+      // New Fields
+      os,
+      hasCustomUi,
+      customUi: hasCustomUi ? customUi : '',
+      majorUpdates,
+      securityPatches,
+      launchDate,
+      price,
+
       // If creating new, random color. If editing, keep existing.
       color: initialData?.color || generateRandomGradient(),
       imageUrl: uploadedImageUrl,
@@ -1188,6 +1212,140 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
               />
             </div>
 
+          </section>
+
+          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+
+          {/* SECTION 7: Software */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.22s' }}>
+             <div className="flex items-center gap-2">
+              <AppWindow className="text-pairon-mint" size={20} />
+              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                    {language === 'it' ? 'Versione OS' : 'OS Version'}
+                  </label>
+                  <input
+                    type="text"
+                    value={os}
+                    onChange={(e) => setOs(e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder={language === 'it' ? 'es. Android 14' : 'e.g. Android 14'}
+                    className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                  />
+               </div>
+
+               {/* UI Customization Checkbox */}
+               <div className={`p-4 rounded-xl border transition-all ${hasCustomUi ? 'border-pairon-mint/50 bg-pairon-mint/5' : (isDark ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
+                 <div 
+                   onClick={() => !isReadOnly && setHasCustomUi(!hasCustomUi)}
+                   className={`flex items-center gap-3 ${!isReadOnly ? 'cursor-pointer' : ''} mb-3`}
+                 >
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${hasCustomUi ? 'bg-pairon-mint border-pairon-mint' : 'border-gray-500'}`}>
+                      {hasCustomUi && <Check size={14} className="text-pairon-obsidian" />}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Layers size={18} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
+                      <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                        {language === 'it' ? 'Personalizzazione UI' : 'UI Customization'}
+                      </span>
+                    </div>
+                 </div>
+                 
+                 {hasCustomUi && (
+                   <div className="pl-9 animate-fade-in">
+                      <SmartSelector 
+                        label={language === 'it' ? 'Interfaccia' : 'Interface'}
+                        value={customUi}
+                        onChange={setCustomUi}
+                        optionsCategory="uiVersions"
+                        defaultOptions={DEFAULT_UI_VERSIONS}
+                        isReadOnly={isReadOnly}
+                        isDark={isDark}
+                        placeholder={language === 'it' ? 'es. One UI 6.1...' : 'e.g. One UI 6.1...'}
+                      />
+                   </div>
+                 )}
+               </div>
+            </div>
+
+            {/* Update Policy */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                    {language === 'it' ? 'Major Update Promessi' : 'Major Updates Promised'}
+                  </label>
+                  <input
+                    type="text"
+                    value={majorUpdates}
+                    onChange={(e) => setMajorUpdates(e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder={language === 'it' ? 'es. 7 Anni' : 'e.g. 7 Years'}
+                    className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                    {language === 'it' ? 'Patch Sicurezza Promesse' : 'Security Patches Promised'}
+                  </label>
+                  <input
+                    type="text"
+                    value={securityPatches}
+                    onChange={(e) => setSecurityPatches(e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder={language === 'it' ? 'es. 7 Anni' : 'e.g. 7 Years'}
+                    className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                  />
+                </div>
+            </div>
+          </section>
+
+          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+
+          {/* SECTION 8: Availability & Price */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.25s' }}>
+             <div className="flex items-center gap-2">
+               <Calendar className="text-pairon-mint" size={20} />
+               <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                 {language === 'it' ? 'Disponibilità e Prezzo' : 'Availability & Price'}
+               </h3>
+             </div>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                    {language === 'it' ? 'Data di Lancio' : 'Launch Date'}
+                  </label>
+                  <input
+                    type="date"
+                    value={launchDate}
+                    onChange={(e) => setLaunchDate(e.target.value)}
+                    disabled={isReadOnly}
+                    className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                    style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                  />
+                </div>
+
+                <div>
+                   <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                    {language === 'it' ? 'Prezzo' : 'Price'}
+                  </label>
+                  <div className="relative">
+                    <Euro size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <input
+                      type="text"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder="es. 999"
+                      className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                    />
+                  </div>
+                </div>
+             </div>
           </section>
 
         </div>
