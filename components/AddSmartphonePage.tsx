@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace } from 'lucide-react';
 import { Language } from '../types';
-import { PhoneData, RamVariant, StorageVariant, Display, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
+import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
 import { Loader } from './Loader';
 import SmartSelector from './SmartSelector';
 
@@ -44,8 +44,23 @@ const DEFAULT_FINGERPRINT_TYPES = [
   "Tasto Home (Frontale)"
 ];
 
+const DEFAULT_FACEID_TYPES = [
+  "2D (Fotocamera)", 
+  "3D (Sensori dedicati)"
+];
+
 const DEFAULT_DISPLAY_TYPES = [
   "LTPO AMOLED", "Dynamic AMOLED 2X", "OLED", "Super Retina XDR OLED", "LCD IPS", "P-OLED"
+];
+
+const DEFAULT_CAMERA_TYPES = [
+  "Principale (Wide)", 
+  "Grandangolare 120°", 
+  "Teleobiettivo 3x", 
+  "Teleobiettivo 5x (Periscopico)", 
+  "Macro", 
+  "Anteriore (Selfie)",
+  "Sensore Profondità"
 ];
 
 const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({ 
@@ -85,13 +100,31 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     hasDolbyVision: false 
   }]);
 
+  // Dynamic Cameras
+  const [cameras, setCameras] = useState<CameraType[]>([{
+    type: '',
+    megapixels: '',
+    hasOis: false
+  }]);
+
+  // Video Settings
+  const [videoSettings, setVideoSettings] = useState<VideoSettings>({
+    maxResolution: '',
+    maxFrameRate: '',
+    hasHdr: false,
+    hasDolbyVision: false
+  });
+
   // Features
   const [hasStereo, setHasStereo] = useState(false);
   const [hasJack, setHasJack] = useState(false);
   
   // Biometrics
   const [hasFingerprint, setHasFingerprint] = useState(true);
-  const [fingerprintType, setFingerprintType] = useState('Sotto display (Ottico)');
+  const [fingerprintType, setFingerprintType] = useState(''); 
+
+  const [hasFaceId, setHasFaceId] = useState(false);
+  const [faceIdType, setFaceIdType] = useState('');
   
   // Haptics
   const [haptics, setHaptics] = useState('');
@@ -120,7 +153,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       if (initialData.displays && initialData.displays.length > 0) {
         setDisplays(initialData.displays);
       } else {
-        // Default fallback if old data structure didn't have displays
         setDisplays([{ 
           type: '', 
           size: '', 
@@ -132,10 +164,25 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
         }]);
       }
 
+      // Cameras initialization
+      if (initialData.cameras && initialData.cameras.length > 0) {
+        setCameras(initialData.cameras);
+      }
+
+      // Video initialization
+      if (initialData.video) {
+        setVideoSettings(initialData.video);
+      }
+
       setHasStereo(initialData.hasStereo);
       setHasJack(initialData.hasJack);
+      
       setHasFingerprint(initialData.hasFingerprint);
-      setFingerprintType(initialData.fingerprintType || 'Sotto display (Ottico)');
+      setFingerprintType(initialData.fingerprintType || ''); 
+
+      setHasFaceId(initialData.hasFaceId || false);
+      setFaceIdType(initialData.faceIdType || '');
+
       setHaptics(initialData.haptics || '');
     }
   }, [initialData]);
@@ -216,6 +263,32 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setDisplays(newDisplays);
   };
 
+  // --- CAMERA HANDLERS ---
+  const handleAddCamera = () => {
+    if (isReadOnly) return;
+    setCameras([...cameras, { type: '', megapixels: '', hasOis: false }]);
+  };
+
+  const handleRemoveCamera = (index: number) => {
+    if (isReadOnly) return;
+    if (cameras.length > 1) {
+      setCameras(cameras.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateCamera = (index: number, field: keyof CameraType, value: any) => {
+    if (isReadOnly) return;
+    const newCameras = [...cameras];
+    // @ts-ignore
+    newCameras[index][field] = value;
+    setCameras(newCameras);
+  };
+
+  const updateVideo = (field: keyof VideoSettings, value: any) => {
+    if (isReadOnly) return;
+    setVideoSettings({ ...videoSettings, [field]: value });
+  };
+
   const generateRandomGradient = () => {
     const colors = [
       'from-blue-600 to-indigo-900',
@@ -262,10 +335,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       ram: rams,
       storage: storages,
       displays: displays,
+      cameras: cameras,
+      video: videoSettings,
       hasStereo,
       hasJack,
       hasFingerprint,
       fingerprintType: hasFingerprint ? fingerprintType : '',
+      hasFaceId,
+      faceIdType: hasFaceId ? faceIdType : '',
       haptics: haptics || (language === 'it' ? 'Non specificato' : 'Not specified'),
       // If creating new, random color. If editing, keep existing.
       color: initialData?.color || generateRandomGradient(),
@@ -557,13 +634,154 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 </div>
               ))}
             </div>
+          </section>
+
+          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+
+          {/* SECTION 3: Cameras & Video */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Aperture className="text-pairon-mint" size={20} />
+                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {language === 'it' ? 'Fotocamera' : 'Camera'}
+                </h3>
+              </div>
+              {!isReadOnly && (
+                <button 
+                  onClick={handleAddCamera} 
+                  className="text-xs font-bold text-pairon-mint hover:bg-pairon-mint/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}
+                </button>
+              )}
+            </div>
+
+            {/* Camera List */}
+            <div className="space-y-4">
+              {cameras.map((cam, index) => (
+                <div key={index} className={`p-5 rounded-2xl border relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                  {!isReadOnly && cameras.length > 1 && (
+                      <button 
+                        onClick={() => handleRemoveCamera(index)} 
+                        className="absolute top-4 right-4 text-red-400 hover:text-red-500 p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                   )}
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                     <div className="flex-1">
+                        <SmartSelector 
+                          label={language === 'it' ? `Fotocamera ${index + 1}` : `Camera ${index + 1}`}
+                          value={cam.type}
+                          onChange={(val) => updateCamera(index, 'type', val)}
+                          optionsCategory="cameraTypes"
+                          defaultOptions={DEFAULT_CAMERA_TYPES}
+                          isReadOnly={isReadOnly}
+                          isDark={isDark}
+                          placeholder={language === 'it' ? 'es. Principale (Wide)' : 'e.g. Main (Wide)'}
+                        />
+                     </div>
+                     
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                          <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                            Megapixel
+                          </label>
+                          <input
+                            type="text"
+                            value={cam.megapixels}
+                            onChange={(e) => updateCamera(index, 'megapixels', e.target.value)}
+                            disabled={isReadOnly}
+                            placeholder="es. 200MP"
+                            className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                          />
+                       </div>
+                       
+                       <div>
+                          <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                            OIS
+                          </label>
+                          <div 
+                            onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)}
+                            className={`h-[46px] flex items-center justify-center gap-2 px-3 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : 'border-transparent bg-white/5 opacity-50'}`}
+                          >
+                            <span className="text-sm font-bold">OIS</span>
+                            {cam.hasOis && <Check size={14} />}
+                          </div>
+                       </div>
+                     </div>
+                   </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Video Config Subsection */}
+            <div className={`p-5 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+               <div className="flex items-center gap-2 mb-4">
+                  <Video className={isDark ? 'text-white' : 'text-gray-900'} size={18} />
+                  <h4 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>Video Capabilities</h4>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                      {language === 'it' ? 'Risoluzione Max' : 'Max Resolution'}
+                    </label>
+                    <input
+                      type="text"
+                      value={videoSettings.maxResolution}
+                      onChange={(e) => updateVideo('maxResolution', e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder="es. 8K"
+                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                      {language === 'it' ? 'Frame Rate Max' : 'Max Frame Rate'}
+                    </label>
+                    <input
+                      type="text"
+                      value={videoSettings.maxFrameRate}
+                      onChange={(e) => updateVideo('maxFrameRate', e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder="es. 120fps"
+                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                    />
+                  </div>
+               </div>
+
+               <div className="flex gap-4">
+                  <div 
+                    onClick={() => !isReadOnly && updateVideo('hasHdr', !videoSettings.hasHdr)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${videoSettings.hasHdr ? 'bg-pairon-mint/20 border-pairon-mint text-pairon-mint' : 'border-transparent opacity-50'}`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${videoSettings.hasHdr ? 'border-pairon-mint bg-pairon-mint' : 'border-gray-500'}`}>
+                        {videoSettings.hasHdr && <Check size={10} className="text-black" />}
+                    </div>
+                    <span className="text-sm font-bold">HDR Video</span>
+                  </div>
+
+                  <div 
+                    onClick={() => !isReadOnly && updateVideo('hasDolbyVision', !videoSettings.hasDolbyVision)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${videoSettings.hasDolbyVision ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400' : 'border-transparent opacity-50'}`}
+                  >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${videoSettings.hasDolbyVision ? 'border-indigo-500 bg-indigo-500' : 'border-gray-500'}`}>
+                        {videoSettings.hasDolbyVision && <Check size={10} className="text-white" />}
+                    </div>
+                    <span className="text-sm font-bold">Dolby Vision</span>
+                  </div>
+               </div>
+            </div>
 
           </section>
 
           <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
 
-          {/* SECTION 3: Hardware */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          {/* SECTION 4: Hardware */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.15s' }}>
             <div className="flex items-center gap-2">
               <Cpu className="text-pairon-mint" size={20} />
               <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3>
@@ -687,7 +905,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
           <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
 
-          {/* SECTION 4: Features */}
+          {/* SECTION 5: Features */}
           <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
              <div className="flex items-center gap-2">
               <Activity className="text-pairon-mint" size={20} />
@@ -705,7 +923,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                    <Volume2 size={18} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
-                   <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Speaker Stereo</span>
+                   <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {language === 'it' ? 'Speaker Stereo' : 'Stereo Speakers'}
+                   </span>
                 </div>
               </div>
 
@@ -719,7 +939,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                    <div className={`w-4 h-4 rounded-full border-2 ${isDark ? 'border-gray-300' : 'border-gray-600'}`}></div>
-                   <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Jack 3.5mm</span>
+                   <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {language === 'it' ? 'Jack 3.5mm' : '3.5mm Jack'}
+                   </span>
                 </div>
               </div>
             </div>
@@ -735,21 +957,56 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <Fingerprint size={18} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
-                    <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Sensore Impronte Digitali</span>
+                    <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {language === 'it' ? 'Sensore Impronte Digitali' : 'Fingerprint Sensor'}
+                    </span>
                   </div>
                </div>
 
                {hasFingerprint && (
                  <div className="pl-9 animate-fade-in">
                     <SmartSelector 
-                      label="Posizione e Tipo"
+                      label={language === 'it' ? 'Posizione e Tipo' : 'Position & Type'}
                       value={fingerprintType}
                       onChange={setFingerprintType}
                       optionsCategory="fingerprintTypes"
                       defaultOptions={DEFAULT_FINGERPRINT_TYPES}
                       isReadOnly={isReadOnly}
                       isDark={isDark}
-                      placeholder={language === 'it' ? 'es. Sotto il display (Ultrasonico)' : 'e.g. Under display (Ultrasonic)'}
+                      placeholder={language === 'it' ? 'es. Sotto il display...' : 'e.g. Under display...'}
+                    />
+                 </div>
+               )}
+            </div>
+
+            {/* Face ID Section */}
+            <div className={`p-4 rounded-xl border transition-all ${hasFaceId ? 'border-pairon-mint/50 bg-pairon-mint/5' : (isDark ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
+               <div 
+                 onClick={() => !isReadOnly && setHasFaceId(!hasFaceId)}
+                 className={`flex items-center gap-3 ${!isReadOnly ? 'cursor-pointer' : ''} mb-3`}
+               >
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${hasFaceId ? 'bg-pairon-mint border-pairon-mint' : 'border-gray-500'}`}>
+                    {hasFaceId && <Check size={14} className="text-pairon-obsidian" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ScanFace size={18} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
+                    <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {language === 'it' ? 'Sblocco Facciale (Face ID)' : 'Face Unlock'}
+                    </span>
+                  </div>
+               </div>
+
+               {hasFaceId && (
+                 <div className="pl-9 animate-fade-in">
+                    <SmartSelector 
+                      label={language === 'it' ? 'Tipo' : 'Type'}
+                      value={faceIdType}
+                      onChange={setFaceIdType}
+                      optionsCategory="faceIdTypes"
+                      defaultOptions={DEFAULT_FACEID_TYPES}
+                      isReadOnly={isReadOnly}
+                      isDark={isDark}
+                      placeholder={language === 'it' ? 'Seleziona 2D o 3D...' : 'Select 2D or 3D...'}
                     />
                  </div>
                )}
@@ -758,7 +1015,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             {/* Haptics Section (Now SmartSelector) */}
             <div>
               <SmartSelector 
-                label="Qualità Vibrazione"
+                label={language === 'it' ? 'Qualità Vibrazione' : 'Haptics Quality'}
                 value={haptics}
                 onChange={setHaptics}
                 optionsCategory="haptics"

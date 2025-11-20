@@ -129,6 +129,19 @@ export interface Display {
   hasDolbyVision: boolean;
 }
 
+export interface Camera {
+  type: string; // e.g., "Main", "Ultra-wide", "Telephoto"
+  megapixels: string;
+  hasOis: boolean;
+}
+
+export interface VideoSettings {
+  maxResolution: string; // e.g. "8K", "4K"
+  maxFrameRate: string; // e.g. "60fps", "120fps"
+  hasHdr: boolean;
+  hasDolbyVision: boolean;
+}
+
 export interface PhoneData {
   id?: string;
   model: string;
@@ -141,7 +154,7 @@ export interface PhoneData {
   ram: RamVariant[];
   storage: StorageVariant[];
   ipRating: string;
-  battery?: string; // Keep generic for dashboard preview if needed
+  battery?: string; 
 
   // Features
   hasStereo: boolean;
@@ -150,9 +163,15 @@ export interface PhoneData {
   // Display
   displays: Display[];
 
+  // Cameras & Video
+  cameras: Camera[];
+  video: VideoSettings;
+
   // Biometrics
   hasFingerprint: boolean;
   fingerprintType?: string; 
+  hasFaceId: boolean;
+  faceIdType?: string; // "2D" or "3D"
   
   // Haptics
   haptics: string; 
@@ -169,7 +188,9 @@ export interface CustomOptions {
   storageTypes: string[];
   haptics: string[];
   fingerprintTypes: string[];
+  faceIdTypes: string[];
   displayTypes: string[];
+  cameraTypes: string[];
 }
 
 // Subscribe to the current user's smartphone collection
@@ -245,7 +266,9 @@ export const subscribeToCustomOptions = (userId: string, callback: (options: Cus
         storageTypes: [], 
         haptics: [],
         fingerprintTypes: [],
-        displayTypes: []
+        faceIdTypes: [],
+        displayTypes: [],
+        cameraTypes: []
       });
     }
   });
