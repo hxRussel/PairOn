@@ -14,7 +14,8 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, isDark, la
 
   const t = {
     it: {
-      title: "Passa a Premium",
+      titlePrefix: "Passa a ",
+      titleSuffix: "Premium",
       subtitle: "Sblocca il massimo potenziale.",
       upgrade: "Sblocca Premium",
       restore: "Ripristina acquisti",
@@ -27,7 +28,8 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, isDark, la
       ]
     },
     en: {
-      title: "Go Premium",
+      titlePrefix: "Go ",
+      titleSuffix: "Premium",
       subtitle: "Unlock full potential.",
       upgrade: "Unlock Premium",
       restore: "Restore purchases",
@@ -58,12 +60,15 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, isDark, la
         <div className="p-6 pt-10 flex flex-col items-center text-center">
            
            {/* Icon & Title - Clean & Centered */}
-           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-yellow-500/20 dark:to-amber-500/20 flex items-center justify-center mb-5 shadow-inner ring-1 ring-yellow-500/20">
-              <Crown size={36} className="text-yellow-500 fill-yellow-500 drop-shadow-sm" />
+           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pairon-mint/20 to-pairon-blue/20 flex items-center justify-center mb-5 shadow-inner ring-1 ring-pairon-mint/30">
+              <Crown size={36} className="text-pairon-mint fill-pairon-mint drop-shadow-sm" />
            </div>
            
-           <h2 className={`text-2xl font-display font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-             {text.title}
+           <h2 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+             {text.titlePrefix}
+             <span className="text-transparent bg-clip-text bg-gradient-to-r from-pairon-mint to-pairon-blue">
+               {text.titleSuffix}
+             </span>
            </h2>
            <p className={`text-sm font-medium mb-6 opacity-60 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
              {text.subtitle}

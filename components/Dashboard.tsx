@@ -1093,7 +1093,7 @@ const Dashboard: React.FC<DashboardProps> = ({
        <div className="flex items-center justify-center h-[60vh] px-6 text-center">
           <div>
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-pairon-surface text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
-               {activeTab === 3 && <Sparkles size={40} style={{ stroke: "url(#rainbow-gradient)" }} />}
+               {activeTab === 3 && <Sparkles size={40} style={{ stroke: "url(#ai-gradient)" }} />}
             </div>
             <h3 className={`text-xl font-bold mb-2 ${textColor}`}>Work in progress</h3>
             <p className={`${subTextColor}`}>Questa sezione sarà disponibile a breve.</p>
@@ -1154,16 +1154,13 @@ const Dashboard: React.FC<DashboardProps> = ({
          language={language}
       />
 
-      {/* Hidden SVG Definition for Rainbow Gradient */}
+      {/* Hidden SVG Definition for AI Gradient */}
       <svg width="0" height="0" className="absolute">
         <defs>
-          <linearGradient id="rainbow-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF0000" />
-            <stop offset="20%" stopColor="#FFA500" />
-            <stop offset="40%" stopColor="#FFFF00" />
-            <stop offset="60%" stopColor="#008000" />
-            <stop offset="80%" stopColor="#0000FF" />
-            <stop offset="100%" stopColor="#8B00FF" />
+          <linearGradient id="ai-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4F46E5" /> {/* Indigo */}
+            <stop offset="50%" stopColor="#3B82F6" /> {/* Blue */}
+            <stop offset="100%" stopColor="#34D399" /> {/* Mint */}
           </linearGradient>
         </defs>
       </svg>
@@ -1217,7 +1214,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             { icon: Home, label: text.nav[0] },
             { icon: Smartphone, label: text.nav[1] },
             { isLogo: true, label: text.nav[2] }, // Comparison (Center "P")
-            { icon: Sparkles, label: text.nav[3], isAi: true }, // AI Rainbow
+            { icon: Sparkles, label: text.nav[3], isAi: true }, // AI
             { icon: Settings, label: text.nav[4] }
           ].map((item, index) => {
             const isActive = activeTab === index;
@@ -1245,7 +1242,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <item.icon 
                     size={isActive ? 24 : 22} 
                     strokeWidth={isActive ? 2.5 : 2}
-                    style={item.isAi ? { stroke: "url(#rainbow-gradient)", fill: isActive ? (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)") : "none" } : {}}
+                    style={item.isAi ? { stroke: "url(#ai-gradient)", fill: isActive ? (isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)") : "none" } : {}}
                     className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`}
                   />
                 )}
