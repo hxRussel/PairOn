@@ -21,7 +21,9 @@ import {
   orderBy,
   serverTimestamp,
   setDoc,
-  getDoc
+  getDoc,
+  updateDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { 
   getStorage, 
@@ -107,17 +109,53 @@ export const updateUserProfile = async (name: string, photoURL: string): Promise
 
 // --- Firestore Data Services ---
 
+export interface RamVariant {
+  amount: string;
+  type: string;
+}
+
+export interface StorageVariant {
+  amount: string;
+  type: string;
+}
+
 export interface PhoneData {
   id?: string;
   model: string;
   brand: string;
-  color: string;
-  battery: string;
+  color: string; // Gradient class string
+  imageUrl?: string;
+  
+  // Hardware
   chip: string;
+  ram: RamVariant[];
+  storage: StorageVariant[];
+  ipRating: string;
+  battery?: string; // Keep generic for dashboard preview if needed
+
+  // Features
+  hasStereo: boolean;
+  hasJack: boolean;
+  
+  // Biometrics
+  hasFingerprint: boolean;
+  fingerprintType?: string; // Changed to string to allow SmartSelector custom values
+  
+  // Haptics
+  haptics: string; 
 }
 
 export interface UserSettings {
   isPremium: boolean;
+}
+
+export interface CustomOptions {
+  brands: string[];
+  chips: string[];
+  ramTypes: string[];
+  storageTypes: string[];
+  haptics: string[];
+  fingerprintTypes: string[];
 }
 
 // Subscribe to the current user's smartphone collection
@@ -141,6 +179,15 @@ export const addSmartphone = async (userId: string, phone: Omit<PhoneData, 'id'>
   await addDoc(collection(db, `users/${userId}/smartphones`), {
     ...phone,
     createdAt: serverTimestamp()
+  });
+};
+
+// Update an existing smartphone
+export const updateSmartphone = async (userId: string, phoneId: string, phone: Partial<PhoneData>) => {
+  const docRef = doc(db, `users/${userId}/smartphones`, phoneId);
+  await updateDoc(docRef, {
+    ...phone,
+    updatedAt: serverTimestamp()
   });
 };
 
@@ -169,6 +216,33 @@ export const setUserPremiumStatus = async (userId: string, isPremium: boolean) =
   }, { merge: true });
 };
 
+// --- Custom Options Management ---
+
+export const subscribeToCustomOptions = (userId: string, callback: (options: CustomOptions) => void) => {
+  const docRef = doc(db, `users/${userId}/settings/customOptions`);
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      callback(doc.data() as CustomOptions);
+    } else {
+      callback({ 
+        brands: [], 
+        chips: [], 
+        ramTypes: [], 
+        storageTypes: [], 
+        haptics: [],
+        fingerprintTypes: [] 
+      });
+    }
+  });
+};
+
+export const addCustomOption = async (userId: string, category: keyof CustomOptions, value: string) => {
+  const docRef = doc(db, `users/${userId}/settings/customOptions`);
+  await setDoc(docRef, {
+    [category]: arrayUnion(value)
+  }, { merge: true });
+};
+
 // --- Storage Services ---
 
 export const uploadProfileImage = async (userId: string, file: File): Promise<string> => {
@@ -184,6 +258,15 @@ export const uploadProfileImage = async (userId: string, file: File): Promise<st
   const snapshot = await uploadBytes(storageRef, file, metadata);
   
   // Get download URL
+  return await getDownloadURL(snapshot.ref);
+};
+
+export const uploadSmartphoneImage = async (userId: string, file: File): Promise<string> => {
+  const fileName = `phone_${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, `users/${userId}/devices/${fileName}`);
+  
+  const metadata = { contentType: file.type };
+  const snapshot = await uploadBytes(storageRef, file, metadata);
   return await getDownloadURL(snapshot.ref);
 };
 

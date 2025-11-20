@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut } from 'lucide-react';
-import { auth, subscribeToSmartphones, addSmartphone, removeSmartphone, PhoneData, logoutUser } from '../services/firebase';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle } from 'lucide-react';
+import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
+import AddSmartphonePage from './AddSmartphonePage';
 
 interface DashboardProps {
   setAuthState: (state: AuthState) => void;
@@ -13,6 +14,52 @@ interface DashboardProps {
   setThemeSetting: (theme: Theme) => void;
   effectiveTheme: 'light' | 'dark';
 }
+
+const DeleteConfirmationModal: React.FC<{ 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+  phoneName: string;
+  isDark: boolean;
+}> = ({ isOpen, onClose, onConfirm, phoneName, isDark }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className={`${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-red-100'} border rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden transform transition-all scale-100`}>
+        <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+        
+        <div className="flex flex-col items-center text-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+            <AlertTriangle size={24} />
+          </div>
+          
+          <div>
+            <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Elimina Smartphone?</h3>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Stai per eliminare <strong>{phoneName}</strong>. Questa azione non può essere annullata.
+            </p>
+          </div>
+
+          <div className="flex gap-3 w-full mt-2">
+            <button 
+              onClick={onClose}
+              className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+            >
+              Annulla
+            </button>
+            <button 
+              onClick={onConfirm}
+              className="flex-1 py-2.5 rounded-xl font-medium bg-red-500 hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-500/20"
+            >
+              Elimina
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   setAuthState, 
@@ -26,15 +73,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeTab, setActiveTab] = useState<number>(0);
   const [savedPhones, setSavedPhones] = useState<PhoneData[]>([]);
   const [loadingPhones, setLoadingPhones] = useState(true);
-  const [addingPhone, setAddingPhone] = useState(false);
+  
+  // Modal States
+  const [isAddingPhone, setIsAddingPhone] = useState(false);
+  const [editingPhone, setEditingPhone] = useState<PhoneData | null>(null);
+  const [viewingPhone, setViewingPhone] = useState<PhoneData | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  
+  // Delete Modal State
+  const [phoneToDelete, setPhoneToDelete] = useState<PhoneData | null>(null);
 
   // Colors based on theme
   const isDark = effectiveTheme === 'dark';
   const bgColor = isDark ? 'bg-pairon-obsidian' : 'bg-pairon-ghost';
   const textColor = isDark ? 'text-pairon-ghost' : 'text-pairon-obsidian';
   const subTextColor = isDark ? 'text-gray-400' : 'text-gray-500';
-  const cardBg = isDark ? 'bg-pairon-surface border-white/5' : 'bg-white border-gray-100';
   const navBg = isDark ? 'bg-pairon-surface/90 border-white/5 text-gray-400' : 'bg-[#E5E5EA]/80 border-white/40 text-gray-400';
 
   useEffect(() => {
@@ -55,7 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     } else {
       setLoadingPhones(false);
     }
-  }, [isProfileOpen]); // Reload when profile closes to update name/pic if changed
+  }, [isProfileOpen]); 
 
   const t = {
     it: {
@@ -94,41 +147,19 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const text = t[language];
 
-  const handleAddRandomPhone = async () => {
-    if (!auth.currentUser) return;
-    setAddingPhone(true);
-
-    // Mock data generator for demonstration until we have a search UI
-    const mockOptions = [
-      { model: 'iPhone 15 Pro', brand: 'Apple', color: 'from-zinc-700 to-zinc-900', battery: '3274 mAh', chip: 'A17 Pro' },
-      { model: 'Galaxy S24 Ultra', brand: 'Samsung', color: 'from-slate-700 to-slate-900', battery: '5000 mAh', chip: 'SD 8 Gen 3' },
-      { model: 'Pixel 8 Pro', brand: 'Google', color: 'from-sky-700 to-sky-900', battery: '5050 mAh', chip: 'Tensor G3' },
-      { model: 'Xiaomi 14 Ultra', brand: 'Xiaomi', color: 'from-orange-700 to-orange-900', battery: '5300 mAh', chip: 'SD 8 Gen 3' },
-      { model: 'OnePlus 12', brand: 'OnePlus', color: 'from-emerald-700 to-emerald-900', battery: '5400 mAh', chip: 'SD 8 Gen 3' }
-    ];
-    
-    const randomPhone = mockOptions[Math.floor(Math.random() * mockOptions.length)];
-
-    try {
-      await addSmartphone(auth.currentUser.uid, randomPhone);
-    } catch (e) {
-      console.error("Failed to add phone", e);
-    } finally {
-      setAddingPhone(false);
-    }
+  const handleDeleteClick = (e: React.MouseEvent, phone: PhoneData) => {
+    e.stopPropagation();
+    setPhoneToDelete(phone);
   };
 
-  const handleDeletePhone = async (e: React.MouseEvent, phoneId?: string) => {
-    e.stopPropagation(); // Prevent card click
-    if (!auth.currentUser || !phoneId) return;
+  const handleConfirmDelete = async () => {
+    if (!auth.currentUser || !phoneToDelete || !phoneToDelete.id) return;
     
-    // Use window.confirm only as a temporary measure before a proper UI
-    if (window.confirm("Eliminare questo smartphone dalla collezione?")) {
-      try {
-        await removeSmartphone(auth.currentUser.uid, phoneId);
-      } catch (error) {
-        console.error("Error deleting phone:", error);
-      }
+    try {
+      await removeSmartphone(auth.currentUser.uid, phoneToDelete.id);
+      setPhoneToDelete(null);
+    } catch (error) {
+      console.error("Error deleting phone:", error);
     }
   };
 
@@ -136,6 +167,23 @@ const Dashboard: React.FC<DashboardProps> = ({
     await logoutUser();
     setAuthState(AuthState.LOGIN);
   };
+
+  // Render Add/Edit/View Phone Page Full Screen Overlay
+  if (isAddingPhone || editingPhone || viewingPhone) {
+    return (
+      <AddSmartphonePage 
+        onClose={() => {
+          setIsAddingPhone(false);
+          setEditingPhone(null);
+          setViewingPhone(null);
+        }} 
+        language={language}
+        isDark={isDark}
+        initialData={editingPhone || viewingPhone}
+        isReadOnly={!!viewingPhone}
+      />
+    );
+  }
 
   // Function to render content based on active tab
   const renderContent = () => {
@@ -224,16 +272,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (activeTab === 0) {
       return (
         <div className="pl-6 pb-32">
-           {/* Carousel Container - Reduced padding-bottom from 10 to 6 to eliminate "track" gap */}
+           {/* Carousel Container */}
            <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 pt-4 pr-6">
             
             {/* Add New Card */}
             <div 
-              onClick={handleAddRandomPhone}
+              onClick={() => setIsAddingPhone(true)}
               className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}
             >
               <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-white/5 group-hover:bg-pairon-indigo/20' : 'bg-gray-100 group-hover:bg-pairon-indigo/10'}`}>
-                {addingPhone ? <Loader className="animate-spin w-8 h-8" /> : <Plus className="w-8 h-8" />}
+                <Plus className="w-8 h-8" />
               </div>
               <span className="font-semibold">{text.add}</span>
             </div>
@@ -247,9 +295,17 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Smartphone Cards */}
             {savedPhones.map((phone) => (
-              <div key={phone.id} className="snap-start shrink-0 w-72 h-96 relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer">
+              <div 
+                key={phone.id} 
+                onClick={() => setViewingPhone(phone)} // Default click opens view mode
+                className="snap-start shrink-0 w-72 h-96 relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer"
+              >
                 {/* Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${phone.color} opacity-90`}></div>
+                <div className={`absolute inset-0 bg-gradient-to-br ${phone.color} opacity-90`}>
+                  {phone.imageUrl && (
+                    <img src={phone.imageUrl} alt={phone.model} className="w-full h-full object-cover mix-blend-overlay opacity-50" />
+                  )}
+                </div>
                 
                 {/* Content */}
                 <div className="absolute inset-0 p-6 flex flex-col justify-between text-white">
@@ -257,12 +313,34 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10">
                       {phone.brand}
                     </span>
-                    <button 
-                      onClick={(e) => handleDeletePhone(e, phone.id)}
-                      className="p-2 bg-black/20 hover:bg-red-500/80 rounded-full backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} className="text-white" />
-                    </button>
+                    
+                    {/* ACTION BUTTONS - Always Visible on Touch, Hover effect on Desktop */}
+                    <div className="flex gap-1 bg-black/30 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                      
+                      {/* View Button */}
+                      <button 
+                        onClick={() => setViewingPhone(phone)}
+                        className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
+                      >
+                         <Eye size={14} />
+                      </button>
+
+                      {/* Edit Button */}
+                      <button 
+                        onClick={() => setEditingPhone(phone)}
+                        className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
+                      >
+                         <Edit2 size={14} />
+                      </button>
+
+                      {/* Delete Button */}
+                      <button 
+                        onClick={(e) => handleDeleteClick(e, phone)}
+                        className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-1 mb-8 relative z-10">
@@ -274,17 +352,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <div className="grid grid-cols-2 gap-3 bg-black/20 backdrop-blur-xl p-4 rounded-2xl border border-white/5">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 text-white/60 text-xs">
-                        <Battery size={12} />
-                        <span>Battery</span>
-                      </div>
-                      <span className="font-semibold text-sm">{phone.battery}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-white/60 text-xs">
                         <Cpu size={12} />
                         <span>Chip</span>
                       </div>
-                      <span className="font-semibold text-sm">{phone.chip}</span>
+                      <span className="font-semibold text-sm truncate">{phone.chip || '-'}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 text-white/60 text-xs">
+                        <Battery size={12} />
+                        <span>RAM</span>
+                      </div>
+                      <span className="font-semibold text-sm truncate">
+                         {phone.ram && phone.ram.length > 0 ? `${phone.ram[0].amount}GB` : '-'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -317,13 +397,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className={`min-h-screen w-full relative overflow-hidden font-sans selection:bg-pairon-mint/30 transition-colors duration-300 ${bgColor} ${textColor}`}>
       
-      {/* User Profile Modal */}
+      {/* Modal Wrappers */}
       <UserProfile 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)} 
         onLogout={handleLogout}
         isDark={isDark}
         language={language}
+      />
+
+      <DeleteConfirmationModal 
+        isOpen={!!phoneToDelete}
+        onClose={() => setPhoneToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        phoneName={phoneToDelete?.model || 'Smartphone'}
+        isDark={isDark}
       />
 
       {/* Hidden SVG Definition for Rainbow Gradient */}
@@ -347,7 +435,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             {activeTab === 4 ? (
                // Minimal Header for Settings
                <div className="h-[52px] flex items-center"> 
-                  {/* Placeholder to keep layout consistent or back button logic if needed later */}
                </div>
             ) : (
                <>
