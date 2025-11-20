@@ -529,7 +529,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
         {isReadOnly && (
             <div className="px-4 py-2 bg-white/10 rounded-xl flex items-center gap-2 text-sm font-medium">
                 <Eye size={16} />
-                <span>Read Only</span>
+                <span>{language === 'it' ? 'Sola Lettura' : 'Read Only'}</span>
             </div>
         )}
       </div>

@@ -380,6 +380,17 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const text = t[language];
 
+  // Labels mapping for sort options
+  const sortLabels: Record<SortOption, { it: string, en: string }> = {
+    alphabetical: { it: 'Alfabetico', en: 'Alphabetical' },
+    date: { it: 'Data Lancio', en: 'Launch Date' },
+    price: { it: 'Prezzo', en: 'Price' },
+    battery: { it: 'Batteria', en: 'Battery Size' },
+    screen: { it: 'Schermo', en: 'Screen Size' },
+    majorUpdates: { it: 'Aggiornamenti', en: 'Major Updates' },
+    securityPatches: { it: 'Sicurezza', en: 'Security Patches' },
+  };
+
   // FILTERING & SORTING LOGIC
   const filteredAndSortedPhones = useMemo(() => {
     // 1. Filter
@@ -633,7 +644,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                    </div>
                  )}
                  <div className={`px-2 py-1 rounded-lg text-xs border ${isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-600'}`}>
-                   Sorted by: {sortOption}
+                   {language === 'it' ? 'Ordinato per:' : 'Sorted by:'} {sortLabels[sortOption][language]}
                  </div>
               </div>
            </div>
