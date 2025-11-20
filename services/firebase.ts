@@ -19,8 +19,16 @@ import {
   query, 
   onSnapshot, 
   orderBy,
-  serverTimestamp 
+  serverTimestamp,
+  setDoc,
+  getDoc
 } from 'firebase/firestore';
+import { 
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  getDownloadURL 
+} from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -36,6 +44,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -87,6 +96,15 @@ export const logoutUser = async (): Promise<void> => {
   await signOut(auth);
 };
 
+export const updateUserProfile = async (name: string, photoURL: string): Promise<void> => {
+  if (auth.currentUser) {
+    await updateProfile(auth.currentUser, {
+      displayName: name,
+      photoURL: photoURL
+    });
+  }
+};
+
 // --- Firestore Data Services ---
 
 export interface PhoneData {
@@ -96,6 +114,10 @@ export interface PhoneData {
   color: string;
   battery: string;
   chip: string;
+}
+
+export interface UserSettings {
+  isPremium: boolean;
 }
 
 // Subscribe to the current user's smartphone collection
@@ -127,4 +149,37 @@ export const removeSmartphone = async (userId: string, phoneId: string) => {
   await deleteDoc(doc(db, `users/${userId}/smartphones`, phoneId));
 };
 
-export { auth, db };
+// --- Subscription / User Settings ---
+
+export const subscribeToUserSettings = (userId: string, callback: (settings: UserSettings) => void) => {
+  const docRef = doc(db, `users/${userId}/settings/preferences`);
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      callback(doc.data() as UserSettings);
+    } else {
+      // Default settings if document doesn't exist
+      callback({ isPremium: false });
+    }
+  });
+};
+
+export const setUserPremiumStatus = async (userId: string, isPremium: boolean) => {
+  await setDoc(doc(db, `users/${userId}/settings/preferences`), {
+    isPremium
+  }, { merge: true });
+};
+
+// --- Storage Services ---
+
+export const uploadProfileImage = async (userId: string, file: File): Promise<string> => {
+  // Create a reference to 'users/USER_ID/profile_TIMESTAMP'
+  const storageRef = ref(storage, `users/${userId}/profile_${Date.now()}`);
+  
+  // Upload file
+  const snapshot = await uploadBytes(storageRef, file);
+  
+  // Get download URL
+  return await getDownloadURL(snapshot.ref);
+};
+
+export { auth, db, storage };

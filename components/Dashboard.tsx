@@ -3,6 +3,7 @@ import { AuthState, Language, Theme } from '../types';
 import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut } from 'lucide-react';
 import { auth, subscribeToSmartphones, addSmartphone, removeSmartphone, PhoneData, logoutUser } from '../services/firebase';
 import { Loader } from './Loader';
+import UserProfile from './UserProfile';
 
 interface DashboardProps {
   setAuthState: (state: AuthState) => void;
@@ -26,6 +27,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [savedPhones, setSavedPhones] = useState<PhoneData[]>([]);
   const [loadingPhones, setLoadingPhones] = useState(true);
   const [addingPhone, setAddingPhone] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Colors based on theme
   const isDark = effectiveTheme === 'dark';
@@ -53,7 +55,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     } else {
       setLoadingPhones(false);
     }
-  }, []);
+  }, [isProfileOpen]); // Reload when profile closes to update name/pic if changed
 
   const t = {
     it: {
@@ -315,6 +317,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className={`min-h-screen w-full relative overflow-hidden font-sans selection:bg-pairon-mint/30 transition-colors duration-300 ${bgColor} ${textColor}`}>
       
+      {/* User Profile Modal */}
+      <UserProfile 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        onLogout={handleLogout}
+        isDark={isDark}
+        language={language}
+      />
+
       {/* Hidden SVG Definition for Rainbow Gradient */}
       <svg width="0" height="0" className="absolute">
         <defs>
@@ -342,21 +353,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                <>
                 <h2 className="text-3xl font-bold tracking-tight leading-tight">
                   {text.welcome} <br/> 
-                  <span className="text-pairon-indigo">{userName}</span>
+                  <span className="text-pairon-indigo">{auth.currentUser?.displayName || userName}</span>
                 </h2>
                 <p className={`${subTextColor} mt-2 text-sm font-medium tracking-wide uppercase opacity-80`}>{text.subtitle}</p>
                </>
             )}
           </div>
           
-          {/* User Profile Section */}
-          <div className="flex-shrink-0">
+          {/* User Profile Section - CLICKABLE */}
+          <div className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" onClick={() => setIsProfileOpen(true)}>
             <div className={`w-12 h-12 rounded-full p-1 shadow-sm border ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-100'}`}>
                <div className="w-full h-full rounded-full overflow-hidden bg-pairon-indigo/10 flex items-center justify-center text-pairon-indigo font-bold text-lg">
                  {auth.currentUser?.photoURL ? (
                    <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
                  ) : (
-                   userName.charAt(0).toUpperCase()
+                   (auth.currentUser?.displayName || userName).charAt(0).toUpperCase()
                  )}
                </div>
             </div>
