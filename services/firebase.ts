@@ -119,6 +119,16 @@ export interface StorageVariant {
   type: string;
 }
 
+export interface Display {
+  type: string;
+  size: string;
+  resolution: string;
+  refreshRate: string;
+  brightness: string;
+  hasHdr: boolean;
+  hasDolbyVision: boolean;
+}
+
 export interface PhoneData {
   id?: string;
   model: string;
@@ -137,9 +147,12 @@ export interface PhoneData {
   hasStereo: boolean;
   hasJack: boolean;
   
+  // Display
+  displays: Display[];
+
   // Biometrics
   hasFingerprint: boolean;
-  fingerprintType?: string; // Changed to string to allow SmartSelector custom values
+  fingerprintType?: string; 
   
   // Haptics
   haptics: string; 
@@ -156,6 +169,7 @@ export interface CustomOptions {
   storageTypes: string[];
   haptics: string[];
   fingerprintTypes: string[];
+  displayTypes: string[];
 }
 
 // Subscribe to the current user's smartphone collection
@@ -230,7 +244,8 @@ export const subscribeToCustomOptions = (userId: string, callback: (options: Cus
         ramTypes: [], 
         storageTypes: [], 
         haptics: [],
-        fingerprintTypes: [] 
+        fingerprintTypes: [],
+        displayTypes: []
       });
     }
   });

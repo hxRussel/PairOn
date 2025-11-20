@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun } from 'lucide-react';
 import { Language } from '../types';
-import { PhoneData, RamVariant, StorageVariant, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
+import { PhoneData, RamVariant, StorageVariant, Display, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
 import { Loader } from './Loader';
 import SmartSelector from './SmartSelector';
 
@@ -44,6 +44,10 @@ const DEFAULT_FINGERPRINT_TYPES = [
   "Tasto Home (Frontale)"
 ];
 
+const DEFAULT_DISPLAY_TYPES = [
+  "LTPO AMOLED", "Dynamic AMOLED 2X", "OLED", "Super Retina XDR OLED", "LCD IPS", "P-OLED"
+];
+
 const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({ 
   onClose, 
   language, 
@@ -69,6 +73,17 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   
   // Dynamic Storage
   const [storages, setStorages] = useState<StorageVariant[]>([{ amount: '', type: '' }]);
+
+  // Dynamic Displays
+  const [displays, setDisplays] = useState<Display[]>([{ 
+    type: '', 
+    size: '', 
+    resolution: '', 
+    refreshRate: '', 
+    brightness: '', 
+    hasHdr: false, 
+    hasDolbyVision: false 
+  }]);
 
   // Features
   const [hasStereo, setHasStereo] = useState(false);
@@ -100,6 +115,23 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       setIpRating(initialData.ipRating);
       if (initialData.ram && initialData.ram.length > 0) setRams(initialData.ram);
       if (initialData.storage && initialData.storage.length > 0) setStorages(initialData.storage);
+      
+      // Displays initialization
+      if (initialData.displays && initialData.displays.length > 0) {
+        setDisplays(initialData.displays);
+      } else {
+        // Default fallback if old data structure didn't have displays
+        setDisplays([{ 
+          type: '', 
+          size: '', 
+          resolution: '', 
+          refreshRate: '', 
+          brightness: '', 
+          hasHdr: false, 
+          hasDolbyVision: false 
+        }]);
+      }
+
       setHasStereo(initialData.hasStereo);
       setHasJack(initialData.hasJack);
       setHasFingerprint(initialData.hasFingerprint);
@@ -155,6 +187,35 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setStorages(newStorages);
   };
 
+  // --- DISPLAY HANDLERS ---
+  const handleAddDisplay = () => {
+    if (isReadOnly) return;
+    setDisplays([...displays, { 
+      type: '', 
+      size: '', 
+      resolution: '', 
+      refreshRate: '', 
+      brightness: '', 
+      hasHdr: false, 
+      hasDolbyVision: false 
+    }]);
+  };
+
+  const handleRemoveDisplay = (index: number) => {
+    if (isReadOnly) return;
+    if (displays.length > 1) {
+      setDisplays(displays.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateDisplay = (index: number, field: keyof Display, value: any) => {
+    if (isReadOnly) return;
+    const newDisplays = [...displays];
+    // @ts-ignore
+    newDisplays[index][field] = value;
+    setDisplays(newDisplays);
+  };
+
   const generateRandomGradient = () => {
     const colors = [
       'from-blue-600 to-indigo-900',
@@ -200,6 +261,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       ipRating,
       ram: rams,
       storage: storages,
+      displays: displays,
       hasStereo,
       hasJack,
       hasFingerprint,
@@ -360,8 +422,147 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           </div>
 
           <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+          
+          {/* SECTION 2: Display */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.05s' }}>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Monitor className="text-pairon-mint" size={20} />
+                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Display</h3>
+              </div>
+              {!isReadOnly && (
+                <button 
+                  onClick={handleAddDisplay} 
+                  className="text-xs font-bold text-pairon-mint hover:bg-pairon-mint/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}
+                </button>
+              )}
+            </div>
+            
+            <div className="space-y-4">
+              {displays.map((display, index) => (
+                <div key={index} className={`p-5 rounded-2xl border relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                   {!isReadOnly && displays.length > 1 && (
+                      <button 
+                        onClick={() => handleRemoveDisplay(index)} 
+                        className="absolute top-4 right-4 text-red-400 hover:text-red-500 p-1"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                   )}
 
-          {/* SECTION 2: Hardware */}
+                   {displays.length > 1 && (
+                     <h4 className={`text-xs font-bold uppercase tracking-wider mb-4 ${labelColor}`}>
+                        Display {index + 1} {index === 1 ? '(Cover/Secondary)' : ''}
+                     </h4>
+                   )}
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <SmartSelector 
+                        label={language === 'it' ? 'Tipo Pannello' : 'Panel Type'}
+                        value={display.type}
+                        onChange={(val) => updateDisplay(index, 'type', val)}
+                        optionsCategory="displayTypes"
+                        defaultOptions={DEFAULT_DISPLAY_TYPES}
+                        isReadOnly={isReadOnly}
+                        isDark={isDark}
+                        placeholder={language === 'it' ? 'es. LTPO AMOLED' : 'e.g. LTPO AMOLED'}
+                      />
+                      
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                          {language === 'it' ? 'Dimensioni' : 'Size'}
+                        </label>
+                        <input
+                          type="text"
+                          value={display.size}
+                          onChange={(e) => updateDisplay(index, 'size', e.target.value)}
+                          disabled={isReadOnly}
+                          placeholder={language === 'it' ? 'es. 6.7 pollici' : 'e.g. 6.7 inches'}
+                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                          {language === 'it' ? 'Risoluzione' : 'Resolution'}
+                        </label>
+                        <input
+                          type="text"
+                          value={display.resolution}
+                          onChange={(e) => updateDisplay(index, 'resolution', e.target.value)}
+                          disabled={isReadOnly}
+                          placeholder={language === 'it' ? 'es. 1440 x 3120 pixel' : 'e.g. 1440 x 3120 pixels'}
+                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                        />
+                      </div>
+
+                      <div>
+                         <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                          Refresh Rate
+                        </label>
+                        <div className="relative">
+                          <Zap size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                          <input
+                            type="text"
+                            value={display.refreshRate}
+                            onChange={(e) => updateDisplay(index, 'refreshRate', e.target.value)}
+                            disabled={isReadOnly}
+                            placeholder="es. 120Hz"
+                            className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                         <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                          {language === 'it' ? 'Luminosità Picco' : 'Peak Brightness'}
+                        </label>
+                        <div className="relative">
+                          <Sun size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
+                          <input
+                            type="text"
+                            value={display.brightness}
+                            onChange={(e) => updateDisplay(index, 'brightness', e.target.value)}
+                            disabled={isReadOnly}
+                            placeholder="es. 2600 nits"
+                            className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                          />
+                        </div>
+                      </div>
+                   </div>
+
+                   <div className="flex gap-4">
+                      <div 
+                        onClick={() => !isReadOnly && updateDisplay(index, 'hasHdr', !display.hasHdr)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${display.hasHdr ? 'bg-pairon-mint/20 border-pairon-mint text-pairon-mint' : 'border-transparent opacity-50'}`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${display.hasHdr ? 'border-pairon-mint bg-pairon-mint' : 'border-gray-500'}`}>
+                           {display.hasHdr && <Check size={10} className="text-black" />}
+                        </div>
+                        <span className="text-sm font-bold">HDR</span>
+                      </div>
+
+                      <div 
+                        onClick={() => !isReadOnly && updateDisplay(index, 'hasDolbyVision', !display.hasDolbyVision)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${display.hasDolbyVision ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400' : 'border-transparent opacity-50'}`}
+                      >
+                         <div className={`w-4 h-4 rounded border flex items-center justify-center ${display.hasDolbyVision ? 'border-indigo-500 bg-indigo-500' : 'border-gray-500'}`}>
+                           {display.hasDolbyVision && <Check size={10} className="text-white" />}
+                        </div>
+                        <span className="text-sm font-bold">Dolby Vision</span>
+                      </div>
+                   </div>
+                </div>
+              ))}
+            </div>
+
+          </section>
+
+          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+
+          {/* SECTION 3: Hardware */}
           <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center gap-2">
               <Cpu className="text-pairon-mint" size={20} />
@@ -486,7 +687,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
           <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
 
-          {/* SECTION 3: Features */}
+          {/* SECTION 4: Features */}
           <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
              <div className="flex items-center gap-2">
               <Activity className="text-pairon-mint" size={20} />
@@ -548,7 +749,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       defaultOptions={DEFAULT_FINGERPRINT_TYPES}
                       isReadOnly={isReadOnly}
                       isDark={isDark}
-                      placeholder="Seleziona tipo sensore..."
+                      placeholder={language === 'it' ? 'es. Sotto il display (Ultrasonico)' : 'e.g. Under display (Ultrasonic)'}
                     />
                  </div>
                )}
