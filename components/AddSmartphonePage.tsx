@@ -120,7 +120,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [hasJack, setHasJack] = useState(false);
   
   // Biometrics
-  const [hasFingerprint, setHasFingerprint] = useState(true);
+  const [hasFingerprint, setHasFingerprint] = useState(false); // Default to false
   const [fingerprintType, setFingerprintType] = useState(''); 
 
   const [hasFaceId, setHasFaceId] = useState(false);
@@ -174,13 +174,13 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
         setVideoSettings(initialData.video);
       }
 
-      setHasStereo(initialData.hasStereo);
-      setHasJack(initialData.hasJack);
+      setHasStereo(initialData.hasStereo ?? false);
+      setHasJack(initialData.hasJack ?? false);
       
-      setHasFingerprint(initialData.hasFingerprint);
+      setHasFingerprint(initialData.hasFingerprint ?? false);
       setFingerprintType(initialData.fingerprintType || ''); 
 
-      setHasFaceId(initialData.hasFaceId || false);
+      setHasFaceId(initialData.hasFaceId ?? false);
       setFaceIdType(initialData.faceIdType || '');
 
       setHaptics(initialData.haptics || '');
@@ -401,6 +401,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     );
   };
 
+  // Helper function for button styling
+  const getToggleBtnStyle = (isActive: boolean) => {
+    if (isActive) {
+      return 'bg-pairon-mint text-pairon-obsidian border-pairon-mint shadow-sm';
+    }
+    return isDark 
+      ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' 
+      : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50';
+  };
+
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${isDark ? 'bg-pairon-obsidian' : 'bg-pairon-ghost'} overflow-hidden animate-fade-in`}>
       
@@ -613,22 +623,18 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                    <div className="flex gap-4">
                       <div 
                         onClick={() => !isReadOnly && updateDisplay(index, 'hasHdr', !display.hasHdr)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${display.hasHdr ? 'bg-pairon-mint/20 border-pairon-mint text-pairon-mint' : 'border-transparent opacity-50'}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${getToggleBtnStyle(display.hasHdr)}`}
                       >
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${display.hasHdr ? 'border-pairon-mint bg-pairon-mint' : 'border-gray-500'}`}>
-                           {display.hasHdr && <Check size={10} className="text-black" />}
-                        </div>
-                        <span className="text-sm font-bold">HDR</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">HDR</span>
+                        {display.hasHdr && <Check size={16} strokeWidth={3} />}
                       </div>
 
                       <div 
                         onClick={() => !isReadOnly && updateDisplay(index, 'hasDolbyVision', !display.hasDolbyVision)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${display.hasDolbyVision ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400' : 'border-transparent opacity-50'}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${getToggleBtnStyle(display.hasDolbyVision)}`}
                       >
-                         <div className={`w-4 h-4 rounded border flex items-center justify-center ${display.hasDolbyVision ? 'border-indigo-500 bg-indigo-500' : 'border-gray-500'}`}>
-                           {display.hasDolbyVision && <Check size={10} className="text-white" />}
-                        </div>
-                        <span className="text-sm font-bold">Dolby Vision</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">Dolby Vision</span>
+                        {display.hasDolbyVision && <Check size={16} strokeWidth={3} />}
                       </div>
                    </div>
                 </div>
@@ -701,14 +707,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                        
                        <div>
                           <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                            OIS
+                            Stabilizzazione
                           </label>
                           <div 
                             onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)}
-                            className={`h-[46px] flex items-center justify-center gap-2 px-3 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : 'border-transparent bg-white/5 opacity-50'}`}
+                            className={`h-[46px] flex items-center justify-center gap-2 px-3 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${getToggleBtnStyle(cam.hasOis)}`}
                           >
-                            <span className="text-sm font-bold">OIS</span>
-                            {cam.hasOis && <Check size={14} />}
+                            <span className="text-xs font-bold uppercase tracking-wider">OIS</span>
+                            {cam.hasOis && <Check size={16} strokeWidth={3} />}
                           </div>
                        </div>
                      </div>
@@ -756,22 +762,18 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                <div className="flex gap-4">
                   <div 
                     onClick={() => !isReadOnly && updateVideo('hasHdr', !videoSettings.hasHdr)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${videoSettings.hasHdr ? 'bg-pairon-mint/20 border-pairon-mint text-pairon-mint' : 'border-transparent opacity-50'}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${getToggleBtnStyle(videoSettings.hasHdr)}`}
                   >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${videoSettings.hasHdr ? 'border-pairon-mint bg-pairon-mint' : 'border-gray-500'}`}>
-                        {videoSettings.hasHdr && <Check size={10} className="text-black" />}
-                    </div>
-                    <span className="text-sm font-bold">HDR Video</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">HDR Video</span>
+                    {videoSettings.hasHdr && <Check size={16} strokeWidth={3} />}
                   </div>
 
                   <div 
                     onClick={() => !isReadOnly && updateVideo('hasDolbyVision', !videoSettings.hasDolbyVision)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${videoSettings.hasDolbyVision ? 'bg-indigo-500/20 border-indigo-500 text-indigo-400' : 'border-transparent opacity-50'}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${!isReadOnly ? 'cursor-pointer' : ''} transition-all ${getToggleBtnStyle(videoSettings.hasDolbyVision)}`}
                   >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${videoSettings.hasDolbyVision ? 'border-indigo-500 bg-indigo-500' : 'border-gray-500'}`}>
-                        {videoSettings.hasDolbyVision && <Check size={10} className="text-white" />}
-                    </div>
-                    <span className="text-sm font-bold">Dolby Vision</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Dolby Vision</span>
+                    {videoSettings.hasDolbyVision && <Check size={16} strokeWidth={3} />}
                   </div>
                </div>
             </div>
@@ -946,7 +948,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
               </div>
             </div>
 
-            {/* Fingerprint Section */}
+            {/* Fingerprint Section - FIXED */}
             <div className={`p-4 rounded-xl border transition-all ${hasFingerprint ? 'border-pairon-mint/50 bg-pairon-mint/5' : (isDark ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
                <div 
                  onClick={() => !isReadOnly && setHasFingerprint(!hasFingerprint)}
