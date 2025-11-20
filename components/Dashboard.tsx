@@ -159,11 +159,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (activeTab === 0) {
       return (
         <div className="pl-6 pb-32">
-           {/* Carousel Container - Removed hide-scrollbar class */}
-           <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 pt-4 pr-6">
+           {/* Carousel Container - Reduced padding-bottom from 10 to 6 to eliminate "track" gap */}
+           <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 pt-4 pr-6">
             
             {/* Add New Card */}
-            <div className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group shadow-sm hover:shadow-md ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}>
+            <div className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}>
               <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-white/5 group-hover:bg-pairon-indigo/20' : 'bg-gray-100 group-hover:bg-pairon-indigo/10'}`}>
                 <Plus className="w-8 h-8" />
               </div>
@@ -172,7 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Smartphone Cards */}
             {savedPhones.map((phone) => (
-              <div key={phone.id} className="snap-start shrink-0 w-72 h-96 relative rounded-[2rem] overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer">
+              <div key={phone.id} className="snap-start shrink-0 w-72 h-96 relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer">
                 {/* Background Gradient */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${phone.color} opacity-90`}></div>
                 
