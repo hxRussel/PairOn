@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
 import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Loader } from './Loader';
 import UserProfile from './UserProfile';
 import AddSmartphonePage from './AddSmartphonePage';
 import PremiumModal from './PremiumModal';
+import AiAdvisor from './AiAdvisor';
 
 interface DashboardProps {
   setAuthState: (state: AuthState) => void;
@@ -376,7 +378,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       subtitle: "Ecco la tua collezione.",
       empty: "Non hai ancora salvato nessuno smartphone.",
       add: "Aggiungi",
-      nav: ["Home", "Salvati", "Confronta", "AI Advisor", "Impostazioni"],
+      nav: ["Home", "Salvati", "Confronta", "PairOn AI", "Impostazioni"],
       searchPlaceholder: "Cerca smartphone...",
       settings: {
         title: "Impostazioni",
@@ -407,7 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       subtitle: "Here is your collection.",
       empty: "You haven't saved any smartphones yet.",
       add: "Add New",
-      nav: ["Home", "Saved", "Compare", "AI Advisor", "Settings"],
+      nav: ["Home", "Saved", "Compare", "PairOn AI", "Settings"],
       searchPlaceholder: "Search smartphones...",
       settings: {
         title: "Settings",
@@ -696,7 +698,30 @@ const Dashboard: React.FC<DashboardProps> = ({
       );
     }
 
-    // COMPARISON VIEW (Tab 2) - "P" logo
+    // AI ADVISOR VIEW (Tab 3)
+    if (activeTab === 3) {
+      // Double check premium status just in case
+      if (!userSettings.isPremium) {
+        return (
+           <div className="flex items-center justify-center h-[60vh]">
+             <Loader className="text-pairon-mint" />
+           </div>
+        );
+      }
+
+      return (
+        <AiAdvisor 
+          savedPhones={savedPhones} 
+          language={language} 
+          isDark={isDark}
+          userName={userName}
+          onBack={() => setActiveTab(0)}
+          onViewPhone={(phone) => setViewingPhone(phone)}
+        />
+      );
+    }
+
+    // COMPARISON VIEW (Tab 2)
     if (activeTab === 2) {
       // Shared Header Logic
       const commonHeader = (
@@ -1109,18 +1134,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       );
     }
 
-    // Other tabs placeholders (Tab 3 AI)
-    return (
-       <div className="flex items-center justify-center h-[60vh] px-6 text-center">
-          <div>
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-pairon-surface text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
-               {activeTab === 3 && <AiIcon size={40} style={{ stroke: "url(#ai-gradient)" }} />}
-            </div>
-            <h3 className={`text-xl font-bold mb-2 ${textColor}`}>Work in progress</h3>
-            <p className={`${subTextColor}`}>Questa sezione sarà disponibile a breve.</p>
-          </div>
-       </div>
-    );
+    return null;
   };
 
   return (
@@ -1187,39 +1201,42 @@ const Dashboard: React.FC<DashboardProps> = ({
       </svg>
 
       {/* Header Section (Only Show if NOT in Settings, or change title in Settings) */}
-      <header className="pt-12 pb-2 px-6 animate-fade-in">
-        <div className="flex justify-between items-start">
-          <div>
-            {activeTab === 4 || activeTab === 1 || activeTab === 2 ? (
-               // Minimal Header for Settings, Saved or Compare List (to save space)
-               <div className="h-[52px] flex items-center"> 
-                  {activeTab === 1 && <h2 className="text-2xl font-bold tracking-tight">{language === 'it' ? 'I tuoi Smartphone' : 'Your Smartphones'}</h2>}
-               </div>
-            ) : (
-               <>
-                <h2 className="text-3xl font-bold tracking-tight leading-tight">
-                  {text.welcome} <br/> 
-                  <span className="text-pairon-indigo">{auth.currentUser?.displayName || userName}</span>
-                </h2>
-                <p className={`${subTextColor} mt-2 text-sm font-medium tracking-wide uppercase opacity-80`}>{text.subtitle}</p>
-               </>
-            )}
-          </div>
-          
-          {/* User Profile Section - CLICKABLE */}
-          <div className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" onClick={() => setIsProfileOpen(true)}>
-            <div className={`w-12 h-12 rounded-full p-1 shadow-sm border ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-100'}`}>
-               <div className="w-full h-full rounded-full overflow-hidden bg-pairon-indigo/10 flex items-center justify-center text-pairon-indigo font-bold text-lg">
-                 {auth.currentUser?.photoURL ? (
-                   <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
-                 ) : (
-                   (auth.currentUser?.displayName || userName).charAt(0).toUpperCase()
-                 )}
-               </div>
+      {/* Also hide if in AI Chat Mode (Tab 3) to give space */}
+      {activeTab !== 3 && (
+        <header className="pt-12 pb-2 px-6 animate-fade-in">
+          <div className="flex justify-between items-start">
+            <div>
+              {activeTab === 4 || activeTab === 1 || activeTab === 2 ? (
+                 // Minimal Header for Settings, Saved, Compare (to save space)
+                 <div className="h-[52px] flex items-center"> 
+                    {activeTab === 1 && <h2 className="text-2xl font-bold tracking-tight">{language === 'it' ? 'I tuoi Smartphone' : 'Your Smartphones'}</h2>}
+                 </div>
+              ) : (
+                 <>
+                  <h2 className="text-3xl font-bold tracking-tight leading-tight">
+                    {text.welcome} <br/> 
+                    <span className="text-pairon-indigo">{auth.currentUser?.displayName || userName}</span>
+                  </h2>
+                  <p className={`${subTextColor} mt-2 text-sm font-medium tracking-wide uppercase opacity-80`}>{text.subtitle}</p>
+                 </>
+              )}
+            </div>
+            
+            {/* User Profile Section - CLICKABLE */}
+            <div className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" onClick={() => setIsProfileOpen(true)}>
+              <div className={`w-12 h-12 rounded-full p-1 shadow-sm border ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-100'}`}>
+                 <div className="w-full h-full rounded-full overflow-hidden bg-pairon-indigo/10 flex items-center justify-center text-pairon-indigo font-bold text-lg">
+                   {auth.currentUser?.photoURL ? (
+                     <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
+                   ) : (
+                     (auth.currentUser?.displayName || userName).charAt(0).toUpperCase()
+                   )}
+                 </div>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Content */}
       <main>
@@ -1227,7 +1244,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       </main>
 
       {/* Bottom Navigation Bar - iOS Style */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
+      <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md transition-all duration-500 ease-in-out ${activeTab === 3 ? 'translate-y-[200%] opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         <div className={`backdrop-blur-2xl border rounded-[2rem] p-1.5 shadow-xl shadow-black/5 flex justify-between items-center relative transition-colors duration-300 ${navBg}`}>
           
           {/* Navigation Items */}
@@ -1244,6 +1261,10 @@ const Dashboard: React.FC<DashboardProps> = ({
               <button
                 key={index}
                 onClick={() => {
+                   if (item.isAi && !userSettings.isPremium) {
+                     setIsPremiumModalOpen(true);
+                     return;
+                   }
                    setActiveTab(index);
                 }}
                 className={`relative w-full h-12 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 rounded-[1.5rem] z-10 ${isActive ? (isDark ? 'text-white' : 'text-black') + ' shadow-[0_2px_8px_rgba(0,0,0,0.1)]' : 'hover:opacity-80'}`}
