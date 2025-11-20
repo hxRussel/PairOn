@@ -6,6 +6,8 @@ export enum AuthState {
 
 export type Language = 'it' | 'en';
 
+export type Theme = 'light' | 'dark' | 'auto';
+
 export interface ComparisonResult {
   winner: string;
   summary: string;
