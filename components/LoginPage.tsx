@@ -206,9 +206,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                       PairOn
                     </h1>
                  </div>
-                 <p className="text-pairon-mint font-medium text-sm">
+                 <p className="text-pairon-mint font-medium text-sm mb-3">
                   {text.heroSubtitle}
                  </p>
+
+                 {/* Feature list for Mobile */}
+                 <div className="space-y-2 flex flex-col items-center">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-4 h-4 rounded-full bg-pairon-mint/20 flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-pairon-mint" />
+                      </div>
+                      <span className="text-xs font-medium">{text.feat1}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-4 h-4 rounded-full bg-pairon-mint/20 flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-pairon-mint" />
+                      </div>
+                      <span className="text-xs font-medium">{text.feat2}</span>
+                    </div>
+                 </div>
             </div>
 
             <div className="bg-slate-800/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl animate-fade-in">
