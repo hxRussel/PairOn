@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, ChevronRight } from 'lucide-react';
-import { auth } from '../services/firebase';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut } from 'lucide-react';
+import { auth, subscribeToSmartphones, addSmartphone, removeSmartphone, PhoneData, logoutUser } from '../services/firebase';
+import { Loader } from './Loader';
 
 interface DashboardProps {
   setAuthState: (state: AuthState) => void;
@@ -22,6 +23,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [userName, setUserName] = useState<string>('Guest');
   const [activeTab, setActiveTab] = useState<number>(0);
+  const [savedPhones, setSavedPhones] = useState<PhoneData[]>([]);
+  const [loadingPhones, setLoadingPhones] = useState(true);
+  const [addingPhone, setAddingPhone] = useState(false);
 
   // Colors based on theme
   const isDark = effectiveTheme === 'dark';
@@ -31,20 +35,23 @@ const Dashboard: React.FC<DashboardProps> = ({
   const cardBg = isDark ? 'bg-pairon-surface border-white/5' : 'bg-white border-gray-100';
   const navBg = isDark ? 'bg-pairon-surface/90 border-white/5 text-gray-400' : 'bg-[#E5E5EA]/80 border-white/40 text-gray-400';
 
-  // Mock data for the carousel
-  const savedPhones = [
-    { id: 1, model: 'iPhone 15 Pro', brand: 'Apple', color: 'from-zinc-700 to-zinc-900', battery: '3274 mAh', chip: 'A17 Pro' },
-    { id: 2, model: 'Galaxy S24 Ultra', brand: 'Samsung', color: 'from-slate-700 to-slate-900', battery: '5000 mAh', chip: 'SD 8 Gen 3' },
-    { id: 3, model: 'Pixel 8 Pro', brand: 'Google', color: 'from-sky-700 to-sky-900', battery: '5050 mAh', chip: 'Tensor G3' },
-  ];
-
   useEffect(() => {
     // Get current user name
     if (auth.currentUser?.displayName) {
       setUserName(auth.currentUser.displayName);
     } else if (auth.currentUser?.email) {
-      // Fallback to part of email if no display name
       setUserName(auth.currentUser.email.split('@')[0]);
+    }
+
+    // Subscribe to real firestore data
+    if (auth.currentUser) {
+      const unsubscribe = subscribeToSmartphones(auth.currentUser.uid, (phones) => {
+        setSavedPhones(phones);
+        setLoadingPhones(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setLoadingPhones(false);
     }
   }, []);
 
@@ -61,7 +68,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         language: "Lingua",
         themeAuto: "Automatico",
         themeLight: "Chiaro",
-        themeDark: "Scuro"
+        themeDark: "Scuro",
+        logout: "Esci"
       }
     },
     en: {
@@ -76,12 +84,56 @@ const Dashboard: React.FC<DashboardProps> = ({
         language: "Language",
         themeAuto: "Auto",
         themeLight: "Light",
-        themeDark: "Dark"
+        themeDark: "Dark",
+        logout: "Log Out"
       }
     }
   };
 
   const text = t[language];
+
+  const handleAddRandomPhone = async () => {
+    if (!auth.currentUser) return;
+    setAddingPhone(true);
+
+    // Mock data generator for demonstration until we have a search UI
+    const mockOptions = [
+      { model: 'iPhone 15 Pro', brand: 'Apple', color: 'from-zinc-700 to-zinc-900', battery: '3274 mAh', chip: 'A17 Pro' },
+      { model: 'Galaxy S24 Ultra', brand: 'Samsung', color: 'from-slate-700 to-slate-900', battery: '5000 mAh', chip: 'SD 8 Gen 3' },
+      { model: 'Pixel 8 Pro', brand: 'Google', color: 'from-sky-700 to-sky-900', battery: '5050 mAh', chip: 'Tensor G3' },
+      { model: 'Xiaomi 14 Ultra', brand: 'Xiaomi', color: 'from-orange-700 to-orange-900', battery: '5300 mAh', chip: 'SD 8 Gen 3' },
+      { model: 'OnePlus 12', brand: 'OnePlus', color: 'from-emerald-700 to-emerald-900', battery: '5400 mAh', chip: 'SD 8 Gen 3' }
+    ];
+    
+    const randomPhone = mockOptions[Math.floor(Math.random() * mockOptions.length)];
+
+    try {
+      await addSmartphone(auth.currentUser.uid, randomPhone);
+    } catch (e) {
+      console.error("Failed to add phone", e);
+    } finally {
+      setAddingPhone(false);
+    }
+  };
+
+  const handleDeletePhone = async (e: React.MouseEvent, phoneId?: string) => {
+    e.stopPropagation(); // Prevent card click
+    if (!auth.currentUser || !phoneId) return;
+    
+    // Use window.confirm only as a temporary measure before a proper UI
+    if (window.confirm("Eliminare questo smartphone dalla collezione?")) {
+      try {
+        await removeSmartphone(auth.currentUser.uid, phoneId);
+      } catch (error) {
+        console.error("Error deleting phone:", error);
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setAuthState(AuthState.LOGIN);
+  };
 
   // Function to render content based on active tab
   const renderContent = () => {
@@ -118,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             {/* Theme Section */}
-            <div className="p-4">
+            <div className={`p-4 ${isDark ? 'border-b border-white/5' : 'border-b border-gray-100'}`}>
               <div className="flex items-center gap-3 mb-3">
                 <div className={`p-2 rounded-lg ${isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600'}`}>
                   <Monitor size={20} />
@@ -150,6 +202,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Logout Section */}
+            <div className="p-4">
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors font-medium text-sm"
+              >
+                <LogOut size={18} />
+                {text.settings.logout}
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -163,12 +226,22 @@ const Dashboard: React.FC<DashboardProps> = ({
            <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 pt-4 pr-6">
             
             {/* Add New Card */}
-            <div className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}>
+            <div 
+              onClick={handleAddRandomPhone}
+              className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}
+            >
               <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-white/5 group-hover:bg-pairon-indigo/20' : 'bg-gray-100 group-hover:bg-pairon-indigo/10'}`}>
-                <Plus className="w-8 h-8" />
+                {addingPhone ? <Loader className="animate-spin w-8 h-8" /> : <Plus className="w-8 h-8" />}
               </div>
               <span className="font-semibold">{text.add}</span>
             </div>
+
+            {/* Loading State */}
+            {loadingPhones && (
+              <div className="snap-start shrink-0 w-72 h-96 flex items-center justify-center">
+                <Loader className={`animate-spin w-8 h-8 ${subTextColor}`} />
+              </div>
+            )}
 
             {/* Smartphone Cards */}
             {savedPhones.map((phone) => (
@@ -182,6 +255,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10">
                       {phone.brand}
                     </span>
+                    <button 
+                      onClick={(e) => handleDeletePhone(e, phone.id)}
+                      className="p-2 bg-black/20 hover:bg-red-500/80 rounded-full backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={14} className="text-white" />
+                    </button>
                   </div>
 
                   <div className="space-y-1 mb-8 relative z-10">

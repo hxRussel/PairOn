@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
-import { signInWithGoogle } from '../services/firebase';
+import { signInWithGoogle, loginWithEmail, resetUserPassword } from '../services/firebase';
 import { Eye, EyeOff, ArrowRight, Check, User, Loader as LoaderIcon, AlertCircle, X } from 'lucide-react';
 import { Loader } from './Loader';
 
@@ -66,7 +66,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [errorState, setErrorState] = useState<{show: boolean, message: string}>({show: false, message: ''});
 
   const isDark = theme === 'dark';
@@ -88,7 +88,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       feat1: "Analisi basata su AI",
       feat2: "Confronto specifiche in tempo reale",
       googleError: "Errore durante l'accesso con Google. Riprova.",
-      googleBtn: "Accedi con Google"
+      googleBtn: "Accedi con Google",
+      genericError: "Credenziali non valide o errore di connessione.",
+      emailReq: "Inserisci la tua email nel campo sopra per reimpostare la password.",
+      emailSent: "Email di recupero inviata! Controlla la tua posta (anche nello spam)."
     },
     en: {
       welcome: "Welcome Back",
@@ -106,17 +109,44 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       feat1: "AI powered analysis",
       feat2: "Real-time specs comparison",
       googleError: "Error signing in with Google. Please try again.",
-      googleBtn: "Sign in with Google"
+      googleBtn: "Sign in with Google",
+      genericError: "Invalid credentials or connection error.",
+      emailReq: "Please enter your email in the field above to reset your password.",
+      emailSent: "Recovery email sent! Check your inbox (and spam folder)."
     }
   };
 
   const text = t[language];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTimeout(() => {
+    setIsLoading(true);
+    try {
+      await loginWithEmail(email, password);
       setAuthState(AuthState.DASHBOARD);
-    }, 800);
+    } catch (error: any) {
+      console.error(error);
+      setErrorState({ show: true, message: error.message || text.genericError });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setErrorState({ show: true, message: text.emailReq });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await resetUserPassword(email);
+      alert(text.emailSent);
+    } catch (error: any) {
+      console.error(error);
+      setErrorState({ show: true, message: error.message || text.genericError });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGuestAccess = () => {
@@ -124,7 +154,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   };
 
   const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
+    setIsLoading(true);
     try {
       await signInWithGoogle();
       setAuthState(AuthState.DASHBOARD);
@@ -132,7 +162,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       console.error(error);
       setErrorState({ show: true, message: error.message || text.googleError });
     } finally {
-      setIsGoogleLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -232,7 +262,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs font-medium text-pairon-mintDark uppercase tracking-wider ml-1">{text.password}</label>
-                    <button type="button" className={`text-xs transition-colors ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'}`}>
+                    <button 
+                      type="button" 
+                      onClick={handleResetPassword}
+                      className={`text-xs transition-colors ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'}`}
+                    >
                       {text.forgot}
                     </button>
                   </div>
@@ -257,10 +291,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
 
                 <button 
                   type="submit"
+                  disabled={isLoading}
                   className="w-full bg-gradient-to-r from-pairon-indigo to-pairon-blue hover:from-pairon-indigo/90 hover:to-pairon-blue/90 text-white font-bold py-3.5 rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-pairon-indigo/25 flex items-center justify-center gap-2 group"
                 >
-                  {text.login}
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                   {isLoading ? <Loader className="animate-spin w-5 h-5" /> : (
+                    <>
+                      {text.login}
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                   )}
                 </button>
               </form>
 
@@ -287,10 +326,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
               <button 
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={isGoogleLoading}
+                disabled={isLoading}
                 className={`w-full border font-medium py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 group ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white' : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-800'}`}
               >
-                {isGoogleLoading ? (
+                {isLoading ? (
                   <Loader className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-800'}`} />
                 ) : (
                   <>

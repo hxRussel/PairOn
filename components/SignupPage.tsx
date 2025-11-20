@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
-import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Check, Loader } from 'lucide-react';
+import { registerWithEmail } from '../services/firebase';
 
 interface SignupPageProps {
   setAuthState: (state: AuthState) => void;
@@ -36,11 +37,14 @@ const FeatureItem: React.FC<{text: string; isDark: boolean}> = ({ text, isDark }
 );
 
 const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLanguage, theme }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isDark = theme === 'dark';
 
@@ -48,6 +52,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
     it: {
       createAccount: "Crea Account",
       join: "Unisciti a PairOn oggi.",
+      name: "Nome",
       email: "Email",
       password: "Password",
       confirmPassword: "Conferma Password",
@@ -59,11 +64,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
       feat1: "Confronti illimitati",
       feat2: "Salva i tuoi preferiti",
       feat3: "Accesso a Gemini Advanced (Coming Soon)",
-      passwordMismatch: "Le password non coincidono"
+      passwordMismatch: "Le password non coincidono",
+      genericError: "Errore durante la registrazione. Riprova."
     },
     en: {
       createAccount: "Create Account",
       join: "Join PairOn today.",
+      name: "Name",
       email: "Email",
       password: "Password",
       confirmPassword: "Confirm Password",
@@ -75,22 +82,32 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
       feat1: "Unlimited comparisons",
       feat2: "Save your favorites",
       feat3: "Access to Gemini Advanced (Coming Soon)",
-      passwordMismatch: "Passwords do not match"
+      passwordMismatch: "Passwords do not match",
+      genericError: "Error during registration. Please try again."
     }
   };
 
   const text = t[language];
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    
     if (password !== confirmPassword) {
-      alert(text.passwordMismatch);
+      setError(text.passwordMismatch);
       return;
     }
-    // Simulate signup success
-    setTimeout(() => {
+
+    setIsLoading(true);
+    try {
+      await registerWithEmail(email, password, name);
       setAuthState(AuthState.DASHBOARD);
-    }, 800);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || text.genericError);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -101,7 +118,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
         <LanguageToggle language={language} setLanguage={setLanguage} isDark={isDark} />
       </div>
 
-      {/* Animated Background Blobs - Opacity adjusted for light mode */}
+      {/* Animated Background Blobs */}
       <div className={`absolute top-0 -left-4 w-72 h-72 bg-pairon-indigo rounded-full mix-blend-multiply filter blur-xl animate-blob ${isDark ? 'opacity-30' : 'opacity-10'}`}></div>
       <div className={`absolute top-0 -right-4 w-72 h-72 bg-pairon-mint rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000 ${isDark ? 'opacity-30' : 'opacity-10'}`}></div>
       <div className={`absolute -bottom-8 left-20 w-72 h-72 bg-pairon-blue rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000 ${isDark ? 'opacity-30' : 'opacity-10'}`}></div>
@@ -150,6 +167,18 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
 
               <form onSubmit={handleSignup} className="space-y-5">
                 
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-pairon-mintDark uppercase tracking-wider ml-1">{text.name}</label>
+                  <input 
+                    type="text" 
+                    required
+                    className={`w-full border rounded-xl px-4 py-3 outline-none transition-all focus:ring-1 focus:ring-pairon-mint/50 ${isDark ? 'bg-pairon-surface border-white/10 text-white placeholder-gray-500 focus:border-pairon-mint' : 'bg-white border-gray-200 text-pairon-obsidian placeholder-gray-400 focus:border-pairon-mintDark'}`}
+                    placeholder="Mario Rossi"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-pairon-mintDark uppercase tracking-wider ml-1">{text.email}</label>
                   <input 
@@ -204,12 +233,23 @@ const SignupPage: React.FC<SignupPageProps> = ({ setAuthState, language, setLang
                   </div>
                 </div>
 
+                {error && (
+                  <div className="text-red-500 text-sm font-medium text-center bg-red-500/10 p-2 rounded-lg">
+                    {error}
+                  </div>
+                )}
+
                 <button 
                   type="submit"
-                  className="w-full bg-gradient-to-r from-pairon-indigo to-pairon-blue hover:from-pairon-indigo/90 hover:to-pairon-blue/90 text-white font-bold py-3.5 rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-pairon-indigo/25 flex items-center justify-center gap-2 group"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-pairon-indigo to-pairon-blue hover:from-pairon-indigo/90 hover:to-pairon-blue/90 disabled:opacity-70 text-white font-bold py-3.5 rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-pairon-indigo/25 flex items-center justify-center gap-2 group"
                 >
-                  {text.signup}
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  {isLoading ? <Loader className="animate-spin w-5 h-5" /> : (
+                    <>
+                      {text.signup}
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </button>
               </form>
 
