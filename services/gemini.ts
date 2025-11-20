@@ -2,7 +2,6 @@ import { GoogleGenAI } from "@google/genai";
 import { Language } from '../types';
 
 // Initialize Gemini API client
-// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getSmartphoneComparison = async (phone1: string, phone2: string, lang: Language = 'it'): Promise<string> => {
