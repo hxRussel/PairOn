@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, Database, JapaneseYen, IndianRupee, Bitcoin } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Bitcoin, Database } from 'lucide-react';
 import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
@@ -711,7 +711,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               >
                 {/* Background for active state */}
                 {isActive && (
-                   <div className={`absolute inset-0 rounded-[1.5rem] -z-10 transition-all duration-300 animate-fade-in ${isDark ? 'bg-pairon-surface' : 'bg-white'}`}></div>
+                   <div className={`absolute inset-0 rounded-[1.5rem] -z-10 transition-all duration-300 animate-fade-in ${isDark ? 'bg-white/10 border border-white/5' : 'bg-white'}`}></div>
                 )}
                 
                 {item.isLogo ? (
