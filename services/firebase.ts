@@ -173,10 +173,15 @@ export const setUserPremiumStatus = async (userId: string, isPremium: boolean) =
 
 export const uploadProfileImage = async (userId: string, file: File): Promise<string> => {
   // Create a reference to 'users/USER_ID/profile_TIMESTAMP'
-  const storageRef = ref(storage, `users/${userId}/profile_${Date.now()}`);
+  const fileName = `profile_${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, `users/${userId}/${fileName}`);
   
-  // Upload file
-  const snapshot = await uploadBytes(storageRef, file);
+  // Upload file with metadata
+  const metadata = {
+    contentType: file.type,
+  };
+  
+  const snapshot = await uploadBytes(storageRef, file, metadata);
   
   // Get download URL
   return await getDownloadURL(snapshot.ref);
