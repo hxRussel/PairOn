@@ -16,6 +16,27 @@ interface DashboardProps {
   effectiveTheme: 'light' | 'dark';
 }
 
+// --- CUSTOM ICONS ---
+const AiIcon = ({ size = 24, strokeWidth = 2, style, className, ...props }: any) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    style={style}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path d="M10 3C10 3 11 9 17 11C11 13 10 19 10 19C10 19 9 13 3 11C9 9 10 3 10 3Z" />
+    <path d="M19 3C19 3 19.5 5 22 6C19.5 7 19 9 19 9C19 9 18.5 7 16 6C18.5 5 19 3 19 3Z" />
+  </svg>
+);
+
 // --- TYPES & HELPERS FOR SORTING ---
 type SortOption = 'alphabetical' | 'date' | 'price' | 'battery' | 'screen' | 'majorUpdates' | 'securityPatches';
 
@@ -1093,7 +1114,7 @@ const Dashboard: React.FC<DashboardProps> = ({
        <div className="flex items-center justify-center h-[60vh] px-6 text-center">
           <div>
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-pairon-surface text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
-               {activeTab === 3 && <Sparkles size={40} style={{ stroke: "url(#ai-gradient)" }} />}
+               {activeTab === 3 && <AiIcon size={40} style={{ stroke: "url(#ai-gradient)" }} />}
             </div>
             <h3 className={`text-xl font-bold mb-2 ${textColor}`}>Work in progress</h3>
             <p className={`${subTextColor}`}>Questa sezione sarà disponibile a breve.</p>
@@ -1214,7 +1235,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             { icon: Home, label: text.nav[0] },
             { icon: Smartphone, label: text.nav[1] },
             { isLogo: true, label: text.nav[2] }, // Comparison (Center "P")
-            { icon: Sparkles, label: text.nav[3], isAi: true }, // AI
+            { icon: AiIcon, label: text.nav[3], isAi: true }, // AI
             { icon: Settings, label: text.nav[4] }
           ].map((item, index) => {
             const isActive = activeTab === index;
