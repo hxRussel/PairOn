@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap } from 'lucide-react';
 import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
@@ -294,11 +294,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Delete Modal State
   const [phoneToDelete, setPhoneToDelete] = useState<PhoneData | null>(null);
 
-  // Saved Phones View (Tab 1) State
+  // Saved Phones View (Tab 1 & 2) State
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('alphabetical');
   const [sortAsc, setSortAsc] = useState(true);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Comparison Logic
+  const [selectedPhoneIds, setSelectedPhoneIds] = useState<string[]>([]);
+  const [showCompareView, setShowCompareView] = useState(false);
 
   // Colors based on theme
   const isDark = effectiveTheme === 'dark';
@@ -335,6 +339,14 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [isProfileOpen]); 
 
+  // Reset comparison state when changing tabs
+  useEffect(() => {
+    if (activeTab !== 2) {
+      setShowCompareView(false);
+      // We keep selectedPhoneIds to be nice to the user if they switch back and forth
+    }
+  }, [activeTab]);
+
   const t = {
     it: {
       welcome: `Ciao,`,
@@ -354,6 +366,17 @@ const Dashboard: React.FC<DashboardProps> = ({
         themeLight: "Chiaro",
         themeDark: "Scuro",
         logout: "Esci"
+      },
+      compare: {
+         title: "Comparazione",
+         select: "Seleziona Smartphone",
+         selected: "Selezionati",
+         start: "Confronta Ora",
+         limitError: "Hai raggiunto il limite di selezione.",
+         limitFree: "Max 6 dispositivi (Free)",
+         limitPremium: "Max 12 dispositivi (Premium)",
+         minSelection: "Seleziona almeno 2 dispositivi",
+         back: "Modifica Selezione"
       }
     },
     en: {
@@ -374,6 +397,17 @@ const Dashboard: React.FC<DashboardProps> = ({
         themeLight: "Light",
         themeDark: "Dark",
         logout: "Log Out"
+      },
+      compare: {
+         title: "Comparison",
+         select: "Select Smartphones",
+         selected: "Selected",
+         start: "Compare Now",
+         limitError: "Selection limit reached.",
+         limitFree: "Max 6 devices (Free)",
+         limitPremium: "Max 12 devices (Premium)",
+         minSelection: "Select at least 2 devices",
+         back: "Edit Selection"
       }
     }
   };
@@ -391,56 +425,79 @@ const Dashboard: React.FC<DashboardProps> = ({
     securityPatches: { it: 'Sicurezza', en: 'Security Patches' },
   };
 
-  // FILTERING & SORTING LOGIC
-  const filteredAndSortedPhones = useMemo(() => {
-    // 1. Filter
-    let filtered = savedPhones.filter(phone => {
-      const searchStr = `${phone.brand} ${phone.model}`.toLowerCase();
-      return searchStr.includes(searchTerm.toLowerCase());
-    });
+  // HELPER: Generic Phone Sorter and Filter
+  const getProcessedPhones = (sourceList: PhoneData[]) => {
+     // 1. Filter
+     let filtered = sourceList.filter(phone => {
+        const searchStr = `${phone.brand} ${phone.model}`.toLowerCase();
+        return searchStr.includes(searchTerm.toLowerCase());
+      });
+  
+      // 2. Sort
+      return filtered.sort((a, b) => {
+        let valA: any, valB: any;
+  
+        switch (sortOption) {
+          case 'alphabetical':
+            valA = `${a.brand} ${a.model}`.toLowerCase();
+            valB = `${b.brand} ${b.model}`.toLowerCase();
+            break;
+          case 'date':
+            valA = a.launchDate ? new Date(a.launchDate).getTime() : 0;
+            valB = b.launchDate ? new Date(b.launchDate).getTime() : 0;
+            break;
+          case 'price':
+            valA = parseNumericValue(a.price);
+            valB = parseNumericValue(b.price);
+            break;
+          case 'battery':
+            valA = parseNumericValue(a.battery?.capacity);
+            valB = parseNumericValue(b.battery?.capacity);
+            break;
+          case 'screen':
+            valA = parseNumericValue(a.displays?.[0]?.size);
+            valB = parseNumericValue(b.displays?.[0]?.size);
+            break;
+          case 'majorUpdates':
+            valA = parseNumericValue(a.majorUpdates);
+            valB = parseNumericValue(b.majorUpdates);
+            break;
+          case 'securityPatches':
+            valA = parseNumericValue(a.securityPatches);
+            valB = parseNumericValue(b.securityPatches);
+            break;
+          default:
+            return 0;
+        }
+  
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+  };
 
-    // 2. Sort
-    return filtered.sort((a, b) => {
-      let valA: any, valB: any;
+  // Phones for Tab 1 (Saved)
+  const filteredAndSortedPhones = useMemo(() => getProcessedPhones(savedPhones), [savedPhones, searchTerm, sortOption, sortAsc]);
 
-      switch (sortOption) {
-        case 'alphabetical':
-          valA = `${a.brand} ${a.model}`.toLowerCase();
-          valB = `${b.brand} ${b.model}`.toLowerCase();
-          break;
-        case 'date':
-          valA = a.launchDate ? new Date(a.launchDate).getTime() : 0;
-          valB = b.launchDate ? new Date(b.launchDate).getTime() : 0;
-          break;
-        case 'price':
-          valA = parseNumericValue(a.price);
-          valB = parseNumericValue(b.price);
-          break;
-        case 'battery':
-          valA = parseNumericValue(a.battery?.capacity);
-          valB = parseNumericValue(b.battery?.capacity);
-          break;
-        case 'screen':
-          valA = parseNumericValue(a.displays?.[0]?.size);
-          valB = parseNumericValue(b.displays?.[0]?.size);
-          break;
-        case 'majorUpdates':
-          valA = parseNumericValue(a.majorUpdates);
-          valB = parseNumericValue(b.majorUpdates);
-          break;
-        case 'securityPatches':
-          valA = parseNumericValue(a.securityPatches);
-          valB = parseNumericValue(b.securityPatches);
-          break;
-        default:
-          return 0;
-      }
+  // Comparison Handlers
+  const handleToggleSelection = (phoneId: string) => {
+     if (selectedPhoneIds.includes(phoneId)) {
+        setSelectedPhoneIds(prev => prev.filter(id => id !== phoneId));
+     } else {
+        const limit = userSettings.isPremium ? 12 : 6;
+        if (selectedPhoneIds.length >= limit) {
+           alert(userSettings.isPremium ? text.compare.limitPremium : text.compare.limitFree);
+           return;
+        }
+        setSelectedPhoneIds(prev => [...prev, phoneId]);
+     }
+  };
 
-      if (valA < valB) return sortAsc ? -1 : 1;
-      if (valA > valB) return sortAsc ? 1 : -1;
-      return 0;
-    });
-  }, [savedPhones, searchTerm, sortOption, sortAsc]);
+  // Phones for Tab 2 (Compare View)
+  const comparisonPhones = useMemo(() => {
+     const selected = savedPhones.filter(p => p.id && selectedPhoneIds.includes(p.id));
+     return getProcessedPhones(selected);
+  }, [savedPhones, selectedPhoneIds, searchTerm, sortOption, sortAsc]);
 
 
   const handleDeleteClick = (e: React.MouseEvent, phone: PhoneData) => {
@@ -600,6 +657,209 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      );
+    }
+
+    // COMPARISON VIEW (Tab 2) - "P" logo
+    if (activeTab === 2) {
+      // Shared Header Logic
+      const commonHeader = (
+        <div className="mb-6 space-y-3 sticky top-0 z-20 backdrop-blur-md bg-opacity-90 py-2">
+              {!showCompareView && (
+                 <div className="flex justify-between items-center px-1">
+                    <h2 className="text-xl font-bold">{text.compare.select}</h2>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                       {selectedPhoneIds.length} / {userSettings.isPremium ? 12 : 6}
+                    </span>
+                 </div>
+              )}
+
+              <div className="flex gap-2">
+                 {showCompareView && (
+                   <button 
+                     onClick={() => setShowCompareView(false)}
+                     className={`p-3 rounded-xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                   >
+                     <ArrowLeft size={20} />
+                   </button>
+                 )}
+
+                <div className={`flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border ${isDark ? 'bg-white/5 border-white/10 text-white focus-within:border-pairon-mint' : 'bg-white border-gray-200 text-gray-900 focus-within:border-pairon-indigo'}`}>
+                   <Search size={18} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+                   <input 
+                     type="text" 
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     placeholder={text.searchPlaceholder}
+                     className="bg-transparent w-full outline-none text-sm"
+                   />
+                </div>
+                <button 
+                  onClick={() => setIsFilterModalOpen(true)}
+                  className={`p-3 rounded-xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <Filter size={20} />
+                </button>
+                <button 
+                   onClick={() => setSortAsc(!sortAsc)}
+                   className={`p-3 rounded-xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                   {sortAsc ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
+                </button>
+              </div>
+              
+              {/* Filter Indicator */}
+              <div className="flex flex-wrap gap-2">
+                 <div className={`px-2 py-1 rounded-lg text-xs border ${isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-600'}`}>
+                   {language === 'it' ? 'Ordinato per:' : 'Sorted by:'} {sortLabels[sortOption][language]}
+                 </div>
+              </div>
+        </div>
+      );
+
+      if (showCompareView) {
+         // COMPARISON GRID VIEW
+         return (
+          <div className="px-6 pt-2 pb-32 animate-fade-in h-[calc(100vh-100px)] overflow-y-auto">
+             {commonHeader}
+             
+             <div className="flex flex-col gap-4">
+                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{text.compare.title}</h3>
+                
+                {/* Horizontal Scrolling Container for Comparison Cards */}
+                <div className="flex overflow-x-auto gap-4 pb-6 -mx-6 px-6 snap-x snap-mandatory">
+                   {comparisonPhones.map(phone => (
+                      <div 
+                        key={phone.id}
+                        onClick={() => setViewingPhone(phone)}
+                        className={`snap-center shrink-0 w-[280px] rounded-3xl border overflow-hidden flex flex-col transition-all hover:scale-[1.01] cursor-pointer ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
+                      >
+                         {/* Card Header */}
+                         <div className={`h-40 relative bg-gradient-to-br ${phone.color} p-4 flex flex-col justify-end`}>
+                            {phone.imageUrl && (
+                              <img src={phone.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-50" />
+                            )}
+                            <span className="relative z-10 text-xs font-bold text-white/80 uppercase tracking-wider bg-black/20 w-fit px-2 py-1 rounded-md backdrop-blur-sm mb-1">
+                              {phone.brand}
+                            </span>
+                            <h4 className="relative z-10 text-xl font-display text-white leading-tight">
+                              {phone.model}
+                            </h4>
+                         </div>
+
+                         {/* Specs List */}
+                         <div className="p-4 flex-1 flex flex-col gap-3 text-sm">
+                            <div className="flex items-center gap-3">
+                               <Cpu size={16} className="text-pairon-mint" />
+                               <span className="truncate font-medium opacity-80">{phone.chip}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                               <Monitor size={16} className="text-blue-400" />
+                               <span className="truncate font-medium opacity-80">
+                                 {phone.displays?.[0] ? `${phone.displays[0].size} ${phone.displays[0].type}` : '-'}
+                               </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                               <Battery size={16} className="text-green-400" />
+                               <span className="truncate font-medium opacity-80">
+                                 {phone.battery?.capacity} {phone.battery?.wiredCharging && `(${phone.battery.wiredCharging})`}
+                               </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                               <Banknote size={16} className="text-yellow-400" />
+                               <span className="truncate font-medium opacity-80 font-mono">
+                                 {phone.price ? `${userSettings.currency === 'USD' ? '$' : '€'} ${phone.price}` : '-'}
+                               </span>
+                            </div>
+                            
+                            {/* Extra info based on sort to highlight why it's ranked */}
+                            {sortOption !== 'alphabetical' && sortOption !== 'price' && sortOption !== 'date' && (
+                               <div className={`mt-auto pt-3 border-t ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
+                                  <span className="text-xs font-bold opacity-60 uppercase">{sortLabels[sortOption][language]}</span>
+                                  <div className="font-bold text-pairon-mint">
+                                     {sortOption === 'battery' && phone.battery?.capacity}
+                                     {sortOption === 'screen' && phone.displays?.[0]?.size}
+                                     {sortOption === 'majorUpdates' && `${phone.majorUpdates} Years`}
+                                     {sortOption === 'securityPatches' && `${phone.securityPatches} Years`}
+                                  </div>
+                               </div>
+                            )}
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+         );
+      }
+
+      // SELECTION LIST VIEW
+      // Reuse logic from Tab 1 but process ALL saved phones to allow selection
+      const selectionList = getProcessedPhones(savedPhones);
+
+      return (
+        <div className="px-6 pt-2 pb-32 animate-fade-in h-[calc(100vh-100px)] overflow-y-auto relative">
+           {commonHeader}
+           
+           <div className="space-y-3 pb-24">
+              {selectionList.length === 0 ? (
+                 <div className={`text-center py-10 ${subTextColor}`}>
+                    {savedPhones.length === 0 ? text.empty : (language === 'it' ? 'Nessun risultato trovato.' : 'No results found.')}
+                 </div>
+              ) : (
+                selectionList.map((phone) => {
+                  const isSelected = selectedPhoneIds.includes(phone.id || '');
+                  return (
+                    <div 
+                      key={phone.id}
+                      onClick={() => phone.id && handleToggleSelection(phone.id)}
+                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all active:scale-[0.98] ${
+                        isSelected 
+                          ? 'bg-pairon-mint/10 border-pairon-mint ring-1 ring-pairon-mint' 
+                          : (isDark ? 'bg-pairon-surface border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm')
+                      }`}
+                    >
+                       <div className="flex items-center gap-4">
+                          {/* Selection Circle */}
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'bg-white/10 text-transparent' : 'bg-gray-200 text-transparent')}`}>
+                             <Check size={14} strokeWidth={4} />
+                          </div>
+
+                          {/* Thumbnail */}
+                          <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${phone.color}`}>
+                             {phone.imageUrl ? (
+                               <img src={phone.imageUrl} alt="" className="w-full h-full object-cover" />
+                             ) : (
+                               <div className="w-full h-full flex items-center justify-center text-white/20">
+                                 <Smartphone size={20} />
+                               </div>
+                             )}
+                          </div>
+                          
+                          {/* Text Info */}
+                          <div>
+                             <div className={`text-xs font-medium mb-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{phone.brand}</div>
+                             <h3 className={`font-bold leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>{phone.model}</h3>
+                          </div>
+                       </div>
+                    </div>
+                  );
+                })
+              )}
+           </div>
+           
+           {/* Floating Compare Action Button */}
+           <div className="fixed bottom-28 left-0 w-full px-6 z-30 flex justify-center pointer-events-none">
+              <button 
+                 onClick={() => setShowCompareView(true)}
+                 disabled={selectedPhoneIds.length < 2}
+                 className={`pointer-events-auto shadow-2xl backdrop-blur-xl px-8 py-4 rounded-full font-bold text-lg flex items-center gap-3 transition-all duration-500 transform ${selectedPhoneIds.length >= 2 ? 'translate-y-0 opacity-100 bg-gradient-to-r from-pairon-indigo to-pairon-blue text-white' : 'translate-y-10 opacity-0 bg-gray-500 text-gray-300'}`}
+              >
+                 <span className="font-display text-2xl">P</span>
+                 {text.compare.start} ({selectedPhoneIds.length})
+              </button>
+           </div>
         </div>
       );
     }
@@ -814,12 +1074,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       );
     }
 
-    // Other tabs placeholders
+    // Other tabs placeholders (Tab 3 AI)
     return (
        <div className="flex items-center justify-center h-[60vh] px-6 text-center">
           <div>
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-pairon-surface text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
-               {activeTab === 2 && <span className="font-display text-4xl">P</span>}
                {activeTab === 3 && <Sparkles size={40} style={{ stroke: "url(#rainbow-gradient)" }} />}
             </div>
             <h3 className={`text-xl font-bold mb-2 ${textColor}`}>Work in progress</h3>
@@ -892,8 +1151,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       <header className="pt-12 pb-2 px-6 animate-fade-in">
         <div className="flex justify-between items-start">
           <div>
-            {activeTab === 4 || activeTab === 1 ? (
-               // Minimal Header for Settings or Saved List (to save space)
+            {activeTab === 4 || activeTab === 1 || activeTab === 2 ? (
+               // Minimal Header for Settings, Saved or Compare List (to save space)
                <div className="h-[52px] flex items-center"> 
                   {activeTab === 1 && <h2 className="text-2xl font-bold tracking-tight">{language === 'it' ? 'I tuoi Smartphone' : 'Your Smartphones'}</h2>}
                </div>
