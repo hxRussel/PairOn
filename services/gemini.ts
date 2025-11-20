@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Language } from '../types';
 
 // Initialize Gemini API client
-// The API key MUST be provided via process.env.API_KEY
+// Fix: Use process.env.API_KEY exclusively as required by guidelines and to resolve TS error with import.meta.env
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getSmartphoneComparison = async (phone1: string, phone2: string, lang: Language = 'it'): Promise<string> => {
