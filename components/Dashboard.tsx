@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Bitcoin, Database } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers } from 'lucide-react';
 import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
@@ -14,6 +14,17 @@ interface DashboardProps {
   setThemeSetting: (theme: Theme) => void;
   effectiveTheme: 'light' | 'dark';
 }
+
+// --- TYPES & HELPERS FOR SORTING ---
+type SortOption = 'alphabetical' | 'date' | 'price' | 'battery' | 'screen' | 'majorUpdates' | 'securityPatches';
+
+const parseNumericValue = (str: string | undefined): number => {
+  if (!str) return 0;
+  // Remove all non-numeric characters except dot
+  const cleaned = str.replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
 
 const DeleteConfirmationModal: React.FC<{ 
   isOpen: boolean; 
@@ -61,6 +72,56 @@ const DeleteConfirmationModal: React.FC<{
   );
 };
 
+// --- FILTER MODAL ---
+const FilterSortModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  currentSort: SortOption;
+  setSort: (s: SortOption) => void;
+  isDark: boolean;
+  language: Language;
+}> = ({ isOpen, onClose, currentSort, setSort, isDark, language }) => {
+  if (!isOpen) return null;
+
+  const options: { id: SortOption; label: string; icon: any }[] = [
+    { id: 'alphabetical', label: language === 'it' ? 'Ordine Alfabetico' : 'Alphabetical', icon: ArrowUpDown },
+    { id: 'date', label: language === 'it' ? 'Data di Lancio' : 'Launch Date', icon: Calendar },
+    { id: 'price', label: language === 'it' ? 'Prezzo' : 'Price', icon: Banknote },
+    { id: 'battery', label: language === 'it' ? 'Dimensione Batteria' : 'Battery Size', icon: Battery },
+    { id: 'screen', label: language === 'it' ? 'Dimensione Schermo' : 'Screen Size', icon: Monitor },
+    { id: 'majorUpdates', label: language === 'it' ? 'Major Updates (Anni)' : 'Major Updates (Years)', icon: Layers },
+    { id: 'securityPatches', label: language === 'it' ? 'Patch Sicurezza (Anni)' : 'Security Patches (Years)', icon: Shield },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className={`w-full max-w-sm rounded-2xl shadow-2xl flex flex-col ${isDark ? 'bg-pairon-surface border border-white/10' : 'bg-white border border-gray-200'}`}>
+        <div className={`p-4 border-b flex justify-between items-center ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
+          <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {language === 'it' ? 'Ordina per' : 'Sort by'}
+          </h3>
+          <button onClick={onClose} className={`p-2 rounded-full ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-2 space-y-1">
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => { setSort(opt.id); onClose(); }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${currentSort === opt.id ? 'bg-pairon-mint text-pairon-obsidian shadow-lg font-bold' : (isDark ? 'bg-transparent text-gray-300 hover:bg-white/5' : 'bg-transparent text-gray-700 hover:bg-gray-100')}`}
+            >
+              <opt.icon size={20} />
+              <span className="text-sm">{opt.label}</span>
+              {currentSort === opt.id && <div className="ml-auto w-2 h-2 rounded-full bg-pairon-obsidian"></div>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- CURRENCY MODAL ---
 const CurrencySelectorModal: React.FC<{
   isOpen: boolean;
@@ -78,7 +139,7 @@ const CurrencySelectorModal: React.FC<{
     { code: 'GBP', name: 'Pound', icon: PoundSterling },
     { code: 'JPY', name: 'Yen', icon: JapaneseYen },
     { code: 'INR', name: 'Rupee', icon: IndianRupee },
-    { code: 'CNY', name: 'Yuan', icon: JapaneseYen }, // Yuan shares Yen symbol often or uses similar
+    { code: 'CNY', name: 'Yuan', icon: JapaneseYen }, 
   ];
 
   return (
@@ -233,6 +294,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Delete Modal State
   const [phoneToDelete, setPhoneToDelete] = useState<PhoneData | null>(null);
 
+  // Saved Phones View (Tab 1) State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('alphabetical');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
   // Colors based on theme
   const isDark = effectiveTheme === 'dark';
   const bgColor = isDark ? 'bg-pairon-obsidian' : 'bg-pairon-ghost';
@@ -275,6 +342,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       empty: "Non hai ancora salvato nessuno smartphone.",
       add: "Aggiungi",
       nav: ["Home", "Salvati", "Confronta", "AI Advisor", "Impostazioni"],
+      searchPlaceholder: "Cerca smartphone...",
       settings: {
         title: "Impostazioni",
         appearance: "Aspetto",
@@ -294,6 +362,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       empty: "You haven't saved any smartphones yet.",
       add: "Add New",
       nav: ["Home", "Saved", "Compare", "AI Advisor", "Settings"],
+      searchPlaceholder: "Search smartphones...",
       settings: {
         title: "Settings",
         appearance: "Appearance",
@@ -310,6 +379,58 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const text = t[language];
+
+  // FILTERING & SORTING LOGIC
+  const filteredAndSortedPhones = useMemo(() => {
+    // 1. Filter
+    let filtered = savedPhones.filter(phone => {
+      const searchStr = `${phone.brand} ${phone.model}`.toLowerCase();
+      return searchStr.includes(searchTerm.toLowerCase());
+    });
+
+    // 2. Sort
+    return filtered.sort((a, b) => {
+      let valA: any, valB: any;
+
+      switch (sortOption) {
+        case 'alphabetical':
+          valA = `${a.brand} ${a.model}`.toLowerCase();
+          valB = `${b.brand} ${b.model}`.toLowerCase();
+          break;
+        case 'date':
+          valA = a.launchDate ? new Date(a.launchDate).getTime() : 0;
+          valB = b.launchDate ? new Date(b.launchDate).getTime() : 0;
+          break;
+        case 'price':
+          valA = parseNumericValue(a.price);
+          valB = parseNumericValue(b.price);
+          break;
+        case 'battery':
+          valA = parseNumericValue(a.battery?.capacity);
+          valB = parseNumericValue(b.battery?.capacity);
+          break;
+        case 'screen':
+          valA = parseNumericValue(a.displays?.[0]?.size);
+          valB = parseNumericValue(b.displays?.[0]?.size);
+          break;
+        case 'majorUpdates':
+          valA = parseNumericValue(a.majorUpdates);
+          valB = parseNumericValue(b.majorUpdates);
+          break;
+        case 'securityPatches':
+          valA = parseNumericValue(a.securityPatches);
+          valB = parseNumericValue(b.securityPatches);
+          break;
+        default:
+          return 0;
+      }
+
+      if (valA < valB) return sortAsc ? -1 : 1;
+      if (valA > valB) return sortAsc ? 1 : -1;
+      return 0;
+    });
+  }, [savedPhones, searchTerm, sortOption, sortAsc]);
+
 
   const handleDeleteClick = (e: React.MouseEvent, phone: PhoneData) => {
     e.stopPropagation();
@@ -358,8 +479,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // Function to render content based on active tab
   const renderContent = () => {
+    // SETTINGS VIEW (Tab 4)
     if (activeTab === 4) {
-      // SETTINGS VIEW
       return (
         <div className="px-6 pt-4 pb-32 animate-fade-in">
           <h2 className={`text-2xl font-bold mb-6 ${textColor}`}>{text.settings.title}</h2>
@@ -472,7 +593,107 @@ const Dashboard: React.FC<DashboardProps> = ({
       );
     }
 
-    // HOME VIEW (Default or Tab 0)
+    // SAVED SMARTPHONES VIEW (Tab 1)
+    if (activeTab === 1) {
+       return (
+        <div className="px-6 pt-2 pb-32 animate-fade-in h-[calc(100vh-100px)] overflow-y-auto">
+           {/* Header & Controls */}
+           <div className="mb-6 space-y-3 sticky top-0 z-20 backdrop-blur-md bg-opacity-90 py-2">
+              <div className="flex gap-2">
+                <div className={`flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border ${isDark ? 'bg-white/5 border-white/10 text-white focus-within:border-pairon-mint' : 'bg-white border-gray-200 text-gray-900 focus-within:border-pairon-indigo'}`}>
+                   <Search size={18} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+                   <input 
+                     type="text" 
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     placeholder={text.searchPlaceholder}
+                     className="bg-transparent w-full outline-none text-sm"
+                   />
+                </div>
+                <button 
+                  onClick={() => setIsFilterModalOpen(true)}
+                  className={`p-3 rounded-xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <Filter size={20} />
+                </button>
+                <button 
+                   onClick={() => setSortAsc(!sortAsc)}
+                   className={`p-3 rounded-xl border transition-colors ${isDark ? 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                   {sortAsc ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
+                </button>
+              </div>
+              
+              {/* Active Filter Indicators */}
+              <div className="flex flex-wrap gap-2">
+                 {searchTerm && (
+                   <div className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 ${isDark ? 'bg-pairon-mint/20 text-pairon-mint' : 'bg-pairon-indigo/10 text-pairon-indigo'}`}>
+                      <span>"{searchTerm}"</span>
+                      <button onClick={() => setSearchTerm('')}><X size={12} /></button>
+                   </div>
+                 )}
+                 <div className={`px-2 py-1 rounded-lg text-xs border ${isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-600'}`}>
+                   Sorted by: {sortOption}
+                 </div>
+              </div>
+           </div>
+
+           {/* List */}
+           <div className="space-y-3">
+              {filteredAndSortedPhones.length === 0 ? (
+                 <div className={`text-center py-10 ${subTextColor}`}>
+                    {savedPhones.length === 0 ? text.empty : (language === 'it' ? 'Nessun risultato trovato.' : 'No results found.')}
+                 </div>
+              ) : (
+                filteredAndSortedPhones.map((phone) => (
+                  <div 
+                    key={phone.id}
+                    onClick={() => setViewingPhone(phone)} // Open Read Only on card click
+                    className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${isDark ? 'bg-pairon-surface border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm'}`}
+                  >
+                     <div className="flex items-center gap-4">
+                        {/* Thumbnail */}
+                        <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${phone.color}`}>
+                           {phone.imageUrl ? (
+                             <img src={phone.imageUrl} alt="" className="w-full h-full object-cover" />
+                           ) : (
+                             <div className="w-full h-full flex items-center justify-center text-white/20">
+                               <Smartphone size={20} />
+                             </div>
+                           )}
+                        </div>
+                        
+                        {/* Text Info */}
+                        <div>
+                           <div className={`text-xs font-medium mb-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{phone.brand}</div>
+                           <h3 className={`font-bold leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>{phone.model}</h3>
+                        </div>
+                     </div>
+
+                     {/* Actions */}
+                     <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingPhone(phone); }}
+                          className={`p-2 rounded-full transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                        >
+                           <Edit2 size={16} />
+                        </button>
+                        <button 
+                          onClick={(e) => handleDeleteClick(e, phone)}
+                          className={`p-2 rounded-full transition-colors ${isDark ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-red-50 hover:bg-red-100 text-red-500'}`}
+                        >
+                           <Trash2 size={16} />
+                        </button>
+                     </div>
+                  </div>
+                ))
+              )}
+           </div>
+        </div>
+       );
+    }
+
+    // HOME VIEW (Default)
     if (activeTab === 0) {
       return (
         <div className="pl-6 pb-32">
@@ -587,7 +808,6 @@ const Dashboard: React.FC<DashboardProps> = ({
        <div className="flex items-center justify-center h-[60vh] px-6 text-center">
           <div>
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-pairon-surface text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
-               {activeTab === 1 && <Smartphone size={40} />}
                {activeTab === 2 && <span className="font-display text-4xl">P</span>}
                {activeTab === 3 && <Sparkles size={40} style={{ stroke: "url(#rainbow-gradient)" }} />}
             </div>
@@ -634,6 +854,15 @@ const Dashboard: React.FC<DashboardProps> = ({
         language={language}
       />
 
+      <FilterSortModal
+         isOpen={isFilterModalOpen}
+         onClose={() => setIsFilterModalOpen(false)}
+         currentSort={sortOption}
+         setSort={setSortOption}
+         isDark={isDark}
+         language={language}
+      />
+
       {/* Hidden SVG Definition for Rainbow Gradient */}
       <svg width="0" height="0" className="absolute">
         <defs>
@@ -649,12 +878,13 @@ const Dashboard: React.FC<DashboardProps> = ({
       </svg>
 
       {/* Header Section (Only Show if NOT in Settings, or change title in Settings) */}
-      <header className="pt-12 pb-6 px-6 animate-fade-in">
+      <header className="pt-12 pb-2 px-6 animate-fade-in">
         <div className="flex justify-between items-start">
           <div>
-            {activeTab === 4 ? (
-               // Minimal Header for Settings
+            {activeTab === 4 || activeTab === 1 ? (
+               // Minimal Header for Settings or Saved List (to save space)
                <div className="h-[52px] flex items-center"> 
+                  {activeTab === 1 && <h2 className="text-2xl font-bold tracking-tight">{language === 'it' ? 'I tuoi Smartphone' : 'Your Smartphones'}</h2>}
                </div>
             ) : (
                <>
