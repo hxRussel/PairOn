@@ -48,19 +48,3 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
     return lang === 'it' ? "Si è verificato un errore durante la connessione all'assistente AI." : "An error occurred while connecting to the AI assistant.";
   }
 };
-
-export const getWelcomeMessage = async (lang: Language): Promise<string> => {
-  try {
-    const langName = lang === 'it' ? 'Italian' : 'English';
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Generate a short, witty, 1-sentence welcome message for a smartphone comparison app named 'PairOn' in ${langName}.`,
-      config: {
-        temperature: 0.9,
-      }
-    });
-    return response.text || (lang === 'it' ? "Benvenuto su PairOn!" : "Welcome to PairOn!");
-  } catch (error) {
-    return lang === 'it' ? "Trova il tuo smartphone ideale." : "Find your perfect smartphone.";
-  }
-}

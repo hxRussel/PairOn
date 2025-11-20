@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
-import { getWelcomeMessage } from '../services/gemini';
 import { signInWithGoogle } from '../services/firebase';
 import { Eye, EyeOff, Smartphone, ArrowRight, Check, User, Loader as LoaderIcon, AlertCircle, X } from 'lucide-react';
 import { Loader } from './Loader';
@@ -66,7 +65,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [welcomeMsg, setWelcomeMsg] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorState, setErrorState] = useState<{show: boolean, message: string}>({show: false, message: ''});
 
@@ -83,7 +81,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       register: "Registrati qui",
       guest: "Continua come ospite",
       heroTitle: "Trova il tuo smartphone perfetto.",
-      defaultWelcome: "Comparazione intelligente.",
+      heroSubtitle: "Inizia a comparare smartphone!",
       feat1: "Analisi basata su Gemini AI",
       feat2: "Confronto specifiche in tempo reale",
       feat3: "Prezzi aggiornati dai migliori store",
@@ -101,7 +99,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       register: "Sign up here",
       guest: "Continue as Guest",
       heroTitle: "Find your perfect smartphone.",
-      defaultWelcome: "Smart comparison.",
+      heroSubtitle: "Start comparing smartphones!",
       feat1: "Gemini AI powered analysis",
       feat2: "Real-time specs comparison",
       feat3: "Best prices from top stores",
@@ -110,11 +108,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   };
 
   const text = t[language];
-
-  useEffect(() => {
-    setWelcomeMsg(text.defaultWelcome);
-    getWelcomeMessage(language).then(setWelcomeMsg);
-  }, [language]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,7 +171,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
             {text.heroTitle}
           </h2>
           <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-            {welcomeMsg}
+            {text.heroSubtitle}
           </p>
 
           <div className="space-y-4 mb-10">
@@ -200,7 +193,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                  <h1 className="font-display text-5xl text-transparent bg-clip-text bg-gradient-to-r from-pairon-mint to-pairon-blue inline-block mb-2">
                   PairOn
                 </h1>
-                <p className="text-slate-400 text-sm">{welcomeMsg}</p>
+                <p className="text-slate-400 text-sm">{text.heroSubtitle}</p>
             </div>
 
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl animate-fade-in">
