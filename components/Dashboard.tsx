@@ -159,8 +159,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (activeTab === 0) {
       return (
         <div className="pl-6 pb-32">
-           {/* Carousel Container */}
-           <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 pt-4 pr-6 hide-scrollbar">
+           {/* Carousel Container - Removed hide-scrollbar class */}
+           <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 pt-4 pr-6">
             
             {/* Add New Card */}
             <div className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group shadow-sm hover:shadow-md ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}>

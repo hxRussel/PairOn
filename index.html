@@ -48,19 +48,29 @@
       }
     </script>
     <style>
-      /* Custom scrollbar for aesthetic touch */
+      /* Custom scrollbar: Transparent track, thumb visible only on interaction */
       ::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
+        height: 6px;
       }
+      
       ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: transparent; 
       }
+      
       ::-webkit-scrollbar-thumb {
-        background: #888; 
-        border-radius: 4px;
+        background: transparent; 
+        border-radius: 10px;
+        transition: background 0.3s ease;
       }
+      
+      /* Show thumb when hovering the scrollable element */
+      *:hover::-webkit-scrollbar-thumb {
+        background: rgba(136, 136, 136, 0.4); 
+      }
+
       ::-webkit-scrollbar-thumb:hover {
-        background: #555; 
+        background: rgba(136, 136, 136, 0.7); 
       }
     </style>
   <script type="importmap">
