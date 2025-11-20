@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi } from 'lucide-react';
 import { Language } from '../types';
-import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
+import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
 import { Loader } from './Loader';
 import SmartSelector from './SmartSelector';
 
@@ -83,6 +83,15 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [chip, setChip] = useState('');
   const [ipRating, setIpRating] = useState('');
   
+  // Battery
+  const [batteryCapacity, setBatteryCapacity] = useState('');
+  const [isSiliconCarbon, setIsSiliconCarbon] = useState(false);
+  const [wiredCharging, setWiredCharging] = useState('');
+  const [hasWireless, setHasWireless] = useState(false);
+  const [wirelessCharging, setWirelessCharging] = useState('');
+  const [hasReverse, setHasReverse] = useState(false);
+  const [reverseCharging, setReverseCharging] = useState('');
+
   // Dynamic RAM
   const [rams, setRams] = useState<RamVariant[]>([{ amount: '', type: '' }]);
   
@@ -149,6 +158,28 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       if (initialData.ram && initialData.ram.length > 0) setRams(initialData.ram);
       if (initialData.storage && initialData.storage.length > 0) setStorages(initialData.storage);
       
+      // Battery Load
+      if (initialData.battery) {
+        // Handle legacy string case just in case, or assume new object structure
+        // Type guard or safe access:
+        if (typeof initialData.battery === 'object') {
+          // CLEANUP: Remove "Unknown" if present from old data to show placeholder
+          const cap = initialData.battery.capacity === 'Unknown' ? '' : initialData.battery.capacity;
+          setBatteryCapacity(cap);
+          
+          setIsSiliconCarbon(initialData.battery.isSiliconCarbon);
+          setWiredCharging(initialData.battery.wiredCharging);
+          setHasWireless(initialData.battery.hasWireless);
+          setWirelessCharging(initialData.battery.wirelessCharging || '');
+          setHasReverse(initialData.battery.hasReverse);
+          setReverseCharging(initialData.battery.reverseCharging || '');
+        } else if (typeof initialData.battery === 'string') {
+          // Legacy fallback
+          const cap = initialData.battery === 'Unknown' ? '' : initialData.battery;
+          setBatteryCapacity(cap);
+        }
+      }
+
       // Displays initialization
       if (initialData.displays && initialData.displays.length > 0) {
         setDisplays(initialData.displays);
@@ -327,6 +358,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       }
     }
 
+    const batteryData: Battery = {
+      capacity: batteryCapacity,
+      isSiliconCarbon,
+      wiredCharging,
+      hasWireless,
+      wirelessCharging: hasWireless ? wirelessCharging : '',
+      hasReverse,
+      reverseCharging: hasReverse ? reverseCharging : ''
+    };
+
     const phoneData: Omit<PhoneData, 'id'> = {
       brand,
       model,
@@ -337,6 +378,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       displays: displays,
       cameras: cameras,
       video: videoSettings,
+      battery: batteryData,
       hasStereo,
       hasJack,
       hasFingerprint,
@@ -347,7 +389,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       // If creating new, random color. If editing, keep existing.
       color: initialData?.color || generateRandomGradient(),
       imageUrl: uploadedImageUrl,
-      battery: initialData?.battery || 'Unknown'
     };
 
     try {
@@ -905,9 +946,128 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             </div>
           </section>
 
+           <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+
+          {/* SECTION 5: Battery */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.18s' }}>
+            <div className="flex items-center gap-2">
+              <BatteryMedium className="text-pairon-mint" size={20} />
+              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                 {language === 'it' ? 'Batteria' : 'Battery'}
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Capacity + Tech */}
+              <div className="flex gap-3 items-end">
+                 <div className="w-1/3">
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                      {language === 'it' ? 'Capacità' : 'Capacity'}
+                    </label>
+                    <input
+                      type="text"
+                      value={batteryCapacity}
+                      onChange={(e) => setBatteryCapacity(e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder="es. 5000 mAh"
+                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                    />
+                 </div>
+                 <div 
+                   onClick={() => !isReadOnly && setIsSiliconCarbon(!isSiliconCarbon)}
+                   className={`flex-1 h-[46px] px-4 rounded-xl border flex items-center justify-center gap-2 transition-all ${!isReadOnly ? 'cursor-pointer' : ''} ${getToggleBtnStyle(isSiliconCarbon)}`}
+                 >
+                    <span className="text-xs font-bold uppercase">{language === 'it' ? 'Silicio/Carbonio' : 'Silicon/Carbon'}</span>
+                    {isSiliconCarbon && <Check size={16} strokeWidth={3} />}
+                 </div>
+              </div>
+
+              {/* Wired Charging */}
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
+                   {language === 'it' ? 'Ricarica Cablata' : 'Wired Charging'}
+                </label>
+                <div className="relative">
+                   <Zap size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                   <input
+                    type="text"
+                    value={wiredCharging}
+                    onChange={(e) => setWiredCharging(e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder="es. 80W"
+                    className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Wireless Charging Section */}
+            <div className={`p-4 rounded-xl border transition-all ${hasWireless ? 'border-pairon-mint/50 bg-pairon-mint/5' : (isDark ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
+               <div 
+                 onClick={() => !isReadOnly && setHasWireless(!hasWireless)}
+                 className={`flex items-center gap-3 ${!isReadOnly ? 'cursor-pointer' : ''} mb-3`}
+               >
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${hasWireless ? 'bg-pairon-mint border-pairon-mint' : 'border-gray-500'}`}>
+                    {hasWireless && <Check size={14} className="text-pairon-obsidian" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Wifi size={18} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
+                    <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {language === 'it' ? 'Ricarica Wireless' : 'Wireless Charging'}
+                    </span>
+                  </div>
+               </div>
+
+               {hasWireless && (
+                 <div className="pl-9 animate-fade-in">
+                    <input
+                      type="text"
+                      value={wirelessCharging}
+                      onChange={(e) => setWirelessCharging(e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder={language === 'it' ? 'Velocità (es. 50W)' : 'Speed (e.g. 50W)'}
+                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
+                    />
+                 </div>
+               )}
+            </div>
+
+            {/* Reverse Charging Section */}
+            <div className={`p-4 rounded-xl border transition-all ${hasReverse ? 'border-pairon-mint/50 bg-pairon-mint/5' : (isDark ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
+               <div 
+                 onClick={() => !isReadOnly && setHasReverse(!hasReverse)}
+                 className={`flex items-center gap-3 ${!isReadOnly ? 'cursor-pointer' : ''} mb-3`}
+               >
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${hasReverse ? 'bg-pairon-mint border-pairon-mint' : 'border-gray-500'}`}>
+                    {hasReverse && <Check size={14} className="text-pairon-obsidian" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RefreshCcw size={18} className={isDark ? 'text-gray-300' : 'text-gray-600'} />
+                    <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {language === 'it' ? 'Ricarica Inversa' : 'Reverse Charging'}
+                    </span>
+                  </div>
+               </div>
+
+               {hasReverse && (
+                 <div className="pl-9 animate-fade-in">
+                    <input
+                      type="text"
+                      value={reverseCharging}
+                      onChange={(e) => setReverseCharging(e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder={language === 'it' ? 'Velocità (es. 10W)' : 'Speed (e.g. 10W)'}
+                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
+                    />
+                 </div>
+               )}
+            </div>
+
+          </section>
+
           <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
 
-          {/* SECTION 5: Features */}
+          {/* SECTION 6: Features */}
           <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
              <div className="flex items-center gap-2">
               <Activity className="text-pairon-mint" size={20} />

@@ -142,6 +142,16 @@ export interface VideoSettings {
   hasDolbyVision: boolean;
 }
 
+export interface Battery {
+  capacity: string; // e.g. "5000 mAh"
+  isSiliconCarbon: boolean;
+  wiredCharging: string; // e.g. "80W"
+  hasWireless: boolean;
+  wirelessCharging?: string; // e.g. "50W"
+  hasReverse: boolean;
+  reverseCharging?: string; // e.g. "10W"
+}
+
 export interface PhoneData {
   id?: string;
   model: string;
@@ -154,7 +164,9 @@ export interface PhoneData {
   ram: RamVariant[];
   storage: StorageVariant[];
   ipRating: string;
-  battery?: string; 
+  
+  // Battery
+  battery: Battery;
 
   // Features
   hasStereo: boolean;
