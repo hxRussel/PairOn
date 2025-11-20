@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthState, Language } from '../types';
-import { Sparkles, LogOut } from 'lucide-react';
+import { Home, Smartphone, Scale, Settings, User, Plus, Battery, Cpu } from 'lucide-react';
+import { auth } from '../services/firebase';
 
 interface DashboardProps {
   setAuthState: (state: AuthState) => void;
@@ -8,54 +9,169 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ setAuthState, language }) => {
+  const [userName, setUserName] = useState<string>('Guest');
+  const [activeTab, setActiveTab] = useState<number>(0);
+
+  // Mock data for the carousel
+  const savedPhones = [
+    { id: 1, model: 'iPhone 15 Pro', brand: 'Apple', color: 'from-zinc-700 to-zinc-900', battery: '3274 mAh', chip: 'A17 Pro' },
+    { id: 2, model: 'Galaxy S24 Ultra', brand: 'Samsung', color: 'from-slate-700 to-slate-900', battery: '5000 mAh', chip: 'SD 8 Gen 3' },
+    { id: 3, model: 'Pixel 8 Pro', brand: 'Google', color: 'from-sky-700 to-sky-900', battery: '5050 mAh', chip: 'Tensor G3' },
+  ];
+
+  useEffect(() => {
+    // Get current user name
+    if (auth.currentUser?.displayName) {
+      setUserName(auth.currentUser.displayName);
+    } else if (auth.currentUser?.email) {
+      // Fallback to part of email if no display name
+      setUserName(auth.currentUser.email.split('@')[0]);
+    }
+  }, []);
+
   const t = {
     it: {
-      logout: "Esci",
-      welcome: "Bentornato in PairOn",
-      desc: "Questa è la dashboard principale. Qui implementerai le funzionalità complete di confronto basate su Gemini Pro per analisi approfondite.",
-      cta: "Inizia un nuovo confronto"
+      welcome: `Ciao,`,
+      subtitle: "Ecco la tua collezione.",
+      empty: "Non hai ancora salvato nessuno smartphone.",
+      add: "Aggiungi",
+      nav: ["Home", "Salvati", "Confronta", "Opzioni", "Profilo"]
     },
     en: {
-      logout: "Log Out",
-      welcome: "Welcome back to PairOn",
-      desc: "This is the main dashboard. Here you will implement full comparison features powered by Gemini Pro for in-depth analysis.",
-      cta: "Start new comparison"
+      welcome: `Hello,`,
+      subtitle: "Here is your collection.",
+      empty: "You haven't saved any smartphones yet.",
+      add: "Add New",
+      nav: ["Home", "Saved", "Compare", "Settings", "Profile"]
     }
   };
 
   const text = t[language];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white font-sans">
-      <nav className="border-b border-white/10 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-           <h1 className="font-display text-2xl text-transparent bg-clip-text bg-gradient-to-r from-pairon-mint to-pairon-blue">
-              PairOn
-           </h1>
-           <button 
-             onClick={() => setAuthState(AuthState.LOGIN)}
-             className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium"
-           >
-             <LogOut size={16} />
-             {text.logout}
-           </button>
-        </div>
-      </nav>
-
-      <main className="container mx-auto px-4 py-12 text-center">
-        <div className="max-w-2xl mx-auto bg-white/5 border border-white/10 rounded-3xl p-12">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-pairon-mint to-pairon-blue rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-pairon-blue/20">
-             <Sparkles className="w-8 h-8 text-white" />
+    <div className="min-h-screen w-full relative overflow-hidden bg-[#F8F8FF] text-[#08100C] font-sans selection:bg-pairon-mint/30">
+      
+      {/* Header Section */}
+      <header className="pt-12 pb-6 px-6 animate-fade-in">
+        <div className="flex justify-between items-end">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">{text.welcome} <br/> <span className="text-pairon-indigo">{userName}</span></h2>
+            <p className="text-gray-500 mt-2 text-sm font-medium tracking-wide uppercase opacity-80">{text.subtitle}</p>
           </div>
-          <h2 className="text-3xl font-bold mb-4">{text.welcome}</h2>
-          <p className="text-slate-400 mb-8 text-lg">
-            {text.desc}
-          </p>
-          <button className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors">
-            {text.cta}
-          </button>
+          {/* Avatar removed from header */}
+        </div>
+      </header>
+
+      {/* Main Content Area - Horizontal Carousel */}
+      <main className="pl-6 pb-32">
+        
+        {/* Carousel Container */}
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 pt-4 pr-6 hide-scrollbar">
+          
+          {/* Add New Card */}
+          <div className="snap-start shrink-0 w-64 h-96 rounded-[2rem] bg-white border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-4 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo transition-all cursor-pointer group shadow-sm hover:shadow-md">
+            <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-pairon-indigo/10 flex items-center justify-center transition-colors">
+              <Plus className="w-8 h-8" />
+            </div>
+            <span className="font-semibold">{text.add}</span>
+          </div>
+
+          {/* Smartphone Cards */}
+          {savedPhones.map((phone) => (
+            <div key={phone.id} className="snap-start shrink-0 w-72 h-96 relative rounded-[2rem] overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer">
+              {/* Background Gradient */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${phone.color} opacity-90`}></div>
+              
+              {/* Content */}
+              <div className="absolute inset-0 p-6 flex flex-col justify-between text-white">
+                <div className="flex justify-between items-start">
+                  <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10">
+                    {phone.brand}
+                  </span>
+                </div>
+
+                <div className="space-y-1 mb-8 relative z-10">
+                  <h3 className="text-2xl font-bold font-display leading-tight">{phone.model}</h3>
+                  <div className="w-12 h-1 bg-pairon-mint rounded-full"></div>
+                </div>
+
+                {/* Specs Grid */}
+                <div className="grid grid-cols-2 gap-3 bg-black/20 backdrop-blur-xl p-4 rounded-2xl border border-white/5">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 text-white/60 text-xs">
+                      <Battery size={12} />
+                      <span>Battery</span>
+                    </div>
+                    <span className="font-semibold text-sm">{phone.battery}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 text-white/60 text-xs">
+                      <Cpu size={12} />
+                      <span>Chip</span>
+                    </div>
+                    <span className="font-semibold text-sm">{phone.chip}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Glossy Overlay Effect */}
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
+            </div>
+          ))}
         </div>
       </main>
+
+      {/* Bottom Navigation Bar - iOS Style */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
+        <div className="bg-[#E5E5EA]/80 backdrop-blur-2xl border border-white/40 rounded-[2rem] p-1.5 shadow-xl shadow-black/5 flex justify-between items-center relative">
+          
+          {/* Navigation Items */}
+          {[
+            { icon: Home, label: text.nav[0] },
+            { icon: Smartphone, label: text.nav[1] },
+            { icon: Scale, label: text.nav[2] }, // Center (Compare)
+            { icon: Settings, label: text.nav[3] },
+            { icon: User, label: text.nav[4] }
+          ].map((item, index) => {
+            const isActive = activeTab === index;
+            
+            return (
+              <button
+                key={index}
+                onClick={() => {
+                   setActiveTab(index);
+                }}
+                className={`relative w-full h-12 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 rounded-[1.5rem] z-10 ${isActive ? 'text-black shadow-[0_2px_8px_rgba(0,0,0,0.1)]' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                {/* Background for active state */}
+                {isActive && (
+                   <div className="absolute inset-0 bg-white rounded-[1.5rem] -z-10 transition-all duration-300 animate-fade-in"></div>
+                )}
+                
+                {index === 4 ? (
+                  /* Profile Picture for 5th item */
+                  <div className={`w-7 h-7 rounded-full overflow-hidden flex items-center justify-center transition-transform duration-300 ${isActive ? 'scale-110 ring-2 ring-white shadow-sm' : 'scale-100 opacity-70 grayscale'} `}>
+                    {auth.currentUser?.photoURL ? (
+                      <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center bg-pairon-indigo text-white font-bold text-[10px] ${isActive ? '' : 'bg-gray-400'}`}>
+                        {userName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <item.icon 
+                    size={isActive ? 22 : 22} 
+                    strokeWidth={isActive ? 2.5 : 2}
+                    className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      
     </div>
   );
 };
