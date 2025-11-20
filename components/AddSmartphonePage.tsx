@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote } from 'lucide-react';
 import { Language } from '../types';
-import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth } from '../services/firebase';
+import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
 import SmartSelector from './SmartSelector';
 
@@ -77,6 +77,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<string>('EUR');
   
   // General
   const [brand, setBrand] = useState('');
@@ -162,6 +163,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     : (isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900');
   
   const labelColor = isDark ? 'text-gray-400' : 'text-gray-500';
+
+  // Fetch Currency Settings
+  useEffect(() => {
+     if (auth.currentUser) {
+        const unsubscribe = subscribeToUserSettings(auth.currentUser.uid, (settings) => {
+           if (settings.currency) setCurrency(settings.currency);
+        });
+        return () => unsubscribe();
+     }
+  }, []);
 
   // Load initial data if editing or viewing
   useEffect(() => {
@@ -474,6 +485,18 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     return isDark 
       ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' 
       : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50';
+  };
+
+  const CurrencyIcon = () => {
+     switch(currency) {
+       case 'USD': return <DollarSign size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
+       case 'GBP': return <PoundSterling size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
+       case 'JPY':
+       case 'CNY': return <JapaneseYen size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
+       case 'INR': return <IndianRupee size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
+       case 'EUR': return <Euro size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
+       default: return <Banknote size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
+     }
   };
 
   return (
@@ -1354,7 +1377,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                     {language === 'it' ? 'Prezzo' : 'Price'}
                   </label>
                   <div className="relative">
-                    <Euro size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <CurrencyIcon />
                     <input
                       type="text"
                       value={price}

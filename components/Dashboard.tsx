@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle } from 'lucide-react';
-import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser } from '../services/firebase';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, Database, JapaneseYen, IndianRupee, Bitcoin } from 'lucide-react';
+import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
 import AddSmartphonePage from './AddSmartphonePage';
@@ -61,6 +61,151 @@ const DeleteConfirmationModal: React.FC<{
   );
 };
 
+// --- CURRENCY MODAL ---
+const CurrencySelectorModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  currentCurrency: string;
+  onSelect: (curr: string) => void;
+  isDark: boolean;
+  language: Language;
+}> = ({ isOpen, onClose, currentCurrency, onSelect, isDark, language }) => {
+  if (!isOpen) return null;
+
+  const currencies = [
+    { code: 'EUR', name: 'Euro', icon: Euro },
+    { code: 'USD', name: 'Dollar', icon: DollarSign },
+    { code: 'GBP', name: 'Pound', icon: PoundSterling },
+    { code: 'JPY', name: 'Yen', icon: JapaneseYen },
+    { code: 'INR', name: 'Rupee', icon: IndianRupee },
+    { code: 'CNY', name: 'Yuan', icon: JapaneseYen }, // Yuan shares Yen symbol often or uses similar
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className={`w-full max-w-sm rounded-2xl shadow-2xl flex flex-col ${isDark ? 'bg-pairon-surface border border-white/10' : 'bg-white border border-gray-200'}`}>
+        <div className={`p-4 border-b flex justify-between items-center ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
+          <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {language === 'it' ? 'Seleziona Valuta' : 'Select Currency'}
+          </h3>
+          <button onClick={onClose} className={`p-2 rounded-full ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-2 grid grid-cols-2 gap-2">
+          {currencies.map((curr) => (
+            <button
+              key={curr.code}
+              onClick={() => onSelect(curr.code)}
+              className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl transition-all ${currentCurrency === curr.code ? 'bg-pairon-mint text-pairon-obsidian shadow-lg' : (isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-50 text-gray-700 hover:bg-gray-100')}`}
+            >
+              <curr.icon size={24} />
+              <span className="font-bold text-sm">{curr.code}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- DATA MANAGEMENT MODAL ---
+const DataManagementModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  isDark: boolean;
+  language: Language;
+}> = ({ isOpen, onClose, isDark, language }) => {
+  const [customOptions, setCustomOptions] = useState<CustomOptions | null>(null);
+  
+  useEffect(() => {
+    if (!isOpen || !auth.currentUser) return;
+    const unsubscribe = subscribeToCustomOptions(auth.currentUser.uid, (opts) => {
+      setCustomOptions(opts);
+    });
+    return () => unsubscribe();
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleDelete = async (category: keyof CustomOptions, value: string) => {
+    if (!auth.currentUser) return;
+    try {
+      await removeCustomOption(auth.currentUser.uid, category, value);
+    } catch (e) {
+      console.error("Error removing option", e);
+    }
+  };
+
+  // Mapping category keys to readable titles
+  const categoryTitles: Record<string, string> = {
+    brands: language === 'it' ? "Brand" : "Brands",
+    chips: language === 'it' ? "Processori" : "Chips",
+    ramTypes: "RAM Types",
+    storageTypes: "Storage Types",
+    haptics: language === 'it' ? "Vibrazione" : "Haptics",
+    fingerprintTypes: language === 'it' ? "Tipi Impronta" : "Fingerprint Types",
+    faceIdTypes: language === 'it' ? "Tipi Face ID" : "Face ID Types",
+    displayTypes: language === 'it' ? "Tipi Display" : "Display Types",
+    cameraTypes: language === 'it' ? "Tipi Fotocamera" : "Camera Types",
+    uiVersions: language === 'it' ? "Versioni UI" : "UI Versions",
+  };
+
+  const hasData = customOptions && Object.values(customOptions).some(arr => (arr as string[]).length > 0);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className={`w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl shadow-2xl ${isDark ? 'bg-pairon-surface border border-white/10' : 'bg-white border border-gray-200'}`}>
+        <div className={`p-4 border-b flex justify-between items-center ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
+          <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {language === 'it' ? 'Gestione Dati Salvati' : 'Manage Saved Data'}
+          </h3>
+          <button onClick={onClose} className={`p-2 rounded-full ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {!hasData ? (
+             <div className={`text-center py-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {language === 'it' ? "Nessun dato personalizzato salvato." : "No custom data saved."}
+             </div>
+          ) : (
+            customOptions && Object.entries(customOptions).map(([key, rawValues]) => {
+               const values = rawValues as string[];
+               if (!values || values.length === 0) return null;
+               
+               return (
+                 <div key={key}>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {categoryTitles[key] || key}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                       {values.map((val: string) => (
+                         <div 
+                           key={val} 
+                           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${isDark ? 'bg-white/5 border-white/10 text-gray-200' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                         >
+                           <span>{val}</span>
+                           <button 
+                             onClick={() => handleDelete(key as keyof CustomOptions, val)}
+                             className="p-0.5 rounded-full hover:bg-red-500 hover:text-white text-gray-400 transition-colors"
+                           >
+                             <X size={14} />
+                           </button>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+               );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ 
   setAuthState, 
   language, 
@@ -80,6 +225,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [viewingPhone, setViewingPhone] = useState<PhoneData | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
+  // Settings Modal States
+  const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [isDataModalOpen, setIsDataModalOpen] = useState(false);
+  const [userSettings, setUserSettings] = useState<UserSettings>({ isPremium: false, currency: 'EUR' });
+  
   // Delete Modal State
   const [phoneToDelete, setPhoneToDelete] = useState<PhoneData | null>(null);
 
@@ -98,13 +248,21 @@ const Dashboard: React.FC<DashboardProps> = ({
       setUserName(auth.currentUser.email.split('@')[0]);
     }
 
-    // Subscribe to real firestore data
+    // Subscribe to real firestore data & settings
     if (auth.currentUser) {
-      const unsubscribe = subscribeToSmartphones(auth.currentUser.uid, (phones) => {
+      const unsubscribePhones = subscribeToSmartphones(auth.currentUser.uid, (phones) => {
         setSavedPhones(phones);
         setLoadingPhones(false);
       });
-      return () => unsubscribe();
+
+      const unsubscribeSettings = subscribeToUserSettings(auth.currentUser.uid, (settings) => {
+         setUserSettings(settings);
+      });
+
+      return () => {
+        unsubscribePhones();
+        unsubscribeSettings();
+      };
     } else {
       setLoadingPhones(false);
     }
@@ -121,6 +279,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         title: "Impostazioni",
         appearance: "Aspetto",
         language: "Lingua",
+        data: "Dati & Preferenze",
+        currency: "Valuta",
+        manageData: "Gestione Dati",
         themeAuto: "Automatico",
         themeLight: "Chiaro",
         themeDark: "Scuro",
@@ -137,6 +298,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         title: "Settings",
         appearance: "Appearance",
         language: "Language",
+        data: "Data & Preferences",
+        currency: "Currency",
+        manageData: "Manage Data",
         themeAuto: "Auto",
         themeLight: "Light",
         themeDark: "Dark",
@@ -166,6 +330,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleLogout = async () => {
     await logoutUser();
     setAuthState(AuthState.LOGIN);
+  };
+
+  const handleSetCurrency = async (code: string) => {
+    if(auth.currentUser) {
+      await setUserCurrency(auth.currentUser.uid, code);
+      setIsCurrencyModalOpen(false);
+    }
   };
 
   // Render Add/Edit/View Phone Page Full Screen Overlay
@@ -249,6 +420,39 @@ const Dashboard: React.FC<DashboardProps> = ({
                 >
                   <Monitor size={18} className="mb-1" />
                   {text.settings.themeAuto}
+                </button>
+              </div>
+            </div>
+
+            {/* Data & Preferences Section */}
+            <div className={`p-4 ${isDark ? 'border-b border-white/5' : 'border-b border-gray-100'}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`p-2 rounded-lg ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
+                  <Database size={20} />
+                </div>
+                <span className={`font-medium ${textColor}`}>{text.settings.data}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {/* Currency Button */}
+                <button 
+                  onClick={() => setIsCurrencyModalOpen(true)}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-medium transition-all ${isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  <div className="flex items-center gap-1">
+                    <Banknote size={18} className="mb-1" />
+                    <span className="mb-1 font-bold text-pairon-mint">{userSettings.currency || 'EUR'}</span>
+                  </div>
+                  {text.settings.currency}
+                </button>
+                
+                {/* Data Management Button */}
+                <button 
+                  onClick={() => setIsDataModalOpen(true)}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl text-xs font-medium transition-all ${isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  <Database size={18} className="mb-1" />
+                  {text.settings.manageData}
                 </button>
               </div>
             </div>
@@ -412,6 +616,22 @@ const Dashboard: React.FC<DashboardProps> = ({
         onConfirm={handleConfirmDelete}
         phoneName={phoneToDelete?.model || 'Smartphone'}
         isDark={isDark}
+      />
+
+      <CurrencySelectorModal
+        isOpen={isCurrencyModalOpen}
+        onClose={() => setIsCurrencyModalOpen(false)}
+        currentCurrency={userSettings.currency || 'EUR'}
+        onSelect={handleSetCurrency}
+        isDark={isDark}
+        language={language}
+      />
+
+      <DataManagementModal 
+        isOpen={isDataModalOpen}
+        onClose={() => setIsDataModalOpen(false)}
+        isDark={isDark}
+        language={language}
       />
 
       {/* Hidden SVG Definition for Rainbow Gradient */}

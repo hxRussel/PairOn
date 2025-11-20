@@ -23,7 +23,8 @@ import {
   setDoc,
   getDoc,
   updateDoc,
-  arrayUnion
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { 
   getStorage, 
@@ -202,6 +203,7 @@ export interface PhoneData {
 
 export interface UserSettings {
   isPremium: boolean;
+  currency?: string;
 }
 
 export interface CustomOptions {
@@ -264,7 +266,7 @@ export const subscribeToUserSettings = (userId: string, callback: (settings: Use
       callback(doc.data() as UserSettings);
     } else {
       // Default settings if document doesn't exist
-      callback({ isPremium: false });
+      callback({ isPremium: false, currency: 'EUR' });
     }
   });
 };
@@ -272,6 +274,12 @@ export const subscribeToUserSettings = (userId: string, callback: (settings: Use
 export const setUserPremiumStatus = async (userId: string, isPremium: boolean) => {
   await setDoc(doc(db, `users/${userId}/settings/preferences`), {
     isPremium
+  }, { merge: true });
+};
+
+export const setUserCurrency = async (userId: string, currency: string) => {
+  await setDoc(doc(db, `users/${userId}/settings/preferences`), {
+    currency
   }, { merge: true });
 };
 
@@ -303,6 +311,13 @@ export const addCustomOption = async (userId: string, category: keyof CustomOpti
   const docRef = doc(db, `users/${userId}/settings/customOptions`);
   await setDoc(docRef, {
     [category]: arrayUnion(value)
+  }, { merge: true });
+};
+
+export const removeCustomOption = async (userId: string, category: keyof CustomOptions, value: string) => {
+  const docRef = doc(db, `users/${userId}/settings/customOptions`);
+  await setDoc(docRef, {
+    [category]: arrayRemove(value)
   }, { merge: true });
 };
 
