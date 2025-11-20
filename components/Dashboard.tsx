@@ -5,6 +5,7 @@ import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, 
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
 import AddSmartphonePage from './AddSmartphonePage';
+import PremiumModal from './PremiumModal';
 
 interface DashboardProps {
   setAuthState: (state: AuthState) => void;
@@ -290,6 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings>({ isPremium: false, currency: 'EUR' });
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   
   // Delete Modal State
   const [phoneToDelete, setPhoneToDelete] = useState<PhoneData | null>(null);
@@ -486,7 +488,11 @@ const Dashboard: React.FC<DashboardProps> = ({
      } else {
         const limit = userSettings.isPremium ? 12 : 6;
         if (selectedPhoneIds.length >= limit) {
-           alert(userSettings.isPremium ? text.compare.limitPremium : text.compare.limitFree);
+           if (!userSettings.isPremium) {
+             setIsPremiumModalOpen(true);
+           } else {
+             alert(text.compare.limitPremium);
+           }
            return;
         }
         setSelectedPhoneIds(prev => [...prev, phoneId]);
@@ -526,6 +532,14 @@ const Dashboard: React.FC<DashboardProps> = ({
       await setUserCurrency(auth.currentUser.uid, code);
       setIsCurrencyModalOpen(false);
     }
+  };
+
+  const handleAddPhoneClick = () => {
+    if (!userSettings.isPremium && savedPhones.length >= 10) {
+      setIsPremiumModalOpen(true);
+      return;
+    }
+    setIsAddingPhone(true);
   };
 
   // Render Add/Edit/View Phone Page Full Screen Overlay
@@ -973,7 +987,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             
             {/* Add New Card */}
             <div 
-              onClick={() => setIsAddingPhone(true)}
+              onClick={handleAddPhoneClick}
               className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}
             >
               <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-white/5 group-hover:bg-pairon-indigo/20' : 'bg-gray-100 group-hover:bg-pairon-indigo/10'}`}>
@@ -1129,6 +1143,13 @@ const Dashboard: React.FC<DashboardProps> = ({
          onClose={() => setIsFilterModalOpen(false)}
          currentSort={sortOption}
          setSort={setSortOption}
+         isDark={isDark}
+         language={language}
+      />
+
+      <PremiumModal 
+         isOpen={isPremiumModalOpen}
+         onClose={() => setIsPremiumModalOpen(false)}
          isDark={isDark}
          language={language}
       />
