@@ -29,46 +29,64 @@ const LanguageToggle: React.FC<{ language: Language; setLanguage: (l: Language) 
   </div>
 );
 
-const ErrorModal: React.FC<{ message: string; onClose: () => void; isDark: boolean }> = ({ message, onClose, isDark }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-    <div className={`${isDark ? 'bg-pairon-surface border-red-500/30' : 'bg-white border-red-200'} border rounded-2xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden transform transition-all scale-100`}>
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
-      <button 
-        onClick={onClose} 
-        className={`absolute top-4 right-4 transition-colors ${isDark ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-black'}`}
-      >
-        <X size={20} />
-      </button>
-      
-      <div className="flex items-start gap-4">
-        <div className="bg-red-500/10 p-3 rounded-full shrink-0">
-          <AlertCircle className="w-6 h-6 text-red-500" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-pairon-obsidian'}`}>Attenzione</h3>
-          <div className={`rounded-lg p-3 border mb-4 select-text cursor-text ${isDark ? 'bg-black/50 border-white/5' : 'bg-gray-50 border-gray-200'}`}>
-             <p className={`text-sm font-medium break-words whitespace-pre-wrap leading-relaxed select-text cursor-text ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-               {message}
-             </p>
+const StatusModal: React.FC<{ message: string; onClose: () => void; isDark: boolean; type: 'error' | 'success'; language: Language }> = ({ message, onClose, isDark, type, language }) => {
+  const isSuccess = type === 'success';
+  const title = isSuccess 
+    ? (language === 'it' ? 'Email Inviata' : 'Email Sent')
+    : (language === 'it' ? 'Attenzione' : 'Attention');
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className={`${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-200'} border rounded-2xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden transform transition-all scale-100`}>
+        <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isSuccess ? 'from-pairon-mint to-pairon-blue' : 'from-red-500 to-orange-500'}`}></div>
+        <button 
+          onClick={onClose} 
+          className={`absolute top-4 right-4 transition-colors ${isDark ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-black'}`}
+        >
+          <X size={20} />
+        </button>
+        
+        <div className="flex items-start gap-4">
+          <div className={`${isSuccess ? 'bg-pairon-mint/10' : 'bg-red-500/10'} p-3 rounded-full shrink-0`}>
+            {isSuccess ? (
+               <Check className="w-6 h-6 text-pairon-mint" />
+            ) : (
+               <AlertCircle className="w-6 h-6 text-red-500" />
+            )}
           </div>
-          <button 
-            onClick={onClose}
-            className={`w-full font-medium py-2.5 rounded-lg transition-colors border ${isDark ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-pairon-obsidian border-gray-200'}`}
-          >
-            Chiudi
-          </button>
+          <div className="flex-1 min-w-0">
+            <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-pairon-obsidian'}`}>
+              {title}
+            </h3>
+            <div className={`rounded-lg p-3 border mb-4 select-text cursor-text ${isDark ? 'bg-black/50 border-white/5' : 'bg-gray-50 border-gray-200'}`}>
+               <p className={`text-sm font-medium break-words whitespace-pre-wrap leading-relaxed select-text cursor-text ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                 {message}
+               </p>
+            </div>
+            <button 
+              onClick={onClose}
+              className={`w-full font-medium py-2.5 rounded-lg transition-colors border ${isDark ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' : 'bg-gray-100 hover:bg-gray-200 text-pairon-obsidian border-gray-200'}`}
+            >
+              {isSuccess ? 'Ok' : (language === 'it' ? 'Chiudi' : 'Close')}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLanguage, theme }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorState, setErrorState] = useState<{show: boolean, message: string}>({show: false, message: ''});
+  // Updated state to handle type (error vs success)
+  const [modalState, setModalState] = useState<{show: boolean, message: string, type: 'error' | 'success'}>({
+    show: false, 
+    message: '', 
+    type: 'error'
+  });
 
   const isDark = theme === 'dark';
 
@@ -143,7 +161,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
            : "Invalid email format.";
       }
 
-      setErrorState({ show: true, message: displayMessage });
+      setModalState({ show: true, message: displayMessage, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -151,18 +169,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
 
   const handleResetPassword = async () => {
     if (!email) {
-      setErrorState({ show: true, message: text.emailReq });
+      setModalState({ show: true, message: text.emailReq, type: 'error' });
       return;
     }
     setIsLoading(true);
     try {
       await resetUserPassword(email);
-      alert(text.emailSent);
+      // Replaced alert with Success Modal
+      setModalState({ show: true, message: text.emailSent, type: 'success' });
     } catch (error: any) {
       console.error(error);
-      // Simple error for reset too
       const msg = language === 'it' ? "Impossibile inviare email. Verifica l'indirizzo." : "Could not send email. Check the address.";
-      setErrorState({ show: true, message: msg });
+      setModalState({ show: true, message: msg, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +193,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       setAuthState(AuthState.DASHBOARD);
     } catch (error: any) {
       console.error(error);
-      setErrorState({ show: true, message: text.googleError });
+      setModalState({ show: true, message: text.googleError, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -184,12 +202,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   return (
     <div className={`min-h-screen w-full relative flex items-center justify-center overflow-hidden transition-colors duration-300 ${isDark ? 'bg-pairon-obsidian' : 'bg-pairon-ghost'}`}>
       
-      {/* Error Modal Overlay */}
-      {errorState.show && (
-        <ErrorModal 
-          message={errorState.message} 
-          onClose={() => setErrorState({ ...errorState, show: false })} 
+      {/* Status Modal Overlay (Success or Error) */}
+      {modalState.show && (
+        <StatusModal 
+          message={modalState.message} 
+          type={modalState.type}
+          onClose={() => setModalState({ ...modalState, show: false })} 
           isDark={isDark}
+          language={language}
         />
       )}
 
