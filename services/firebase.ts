@@ -9,6 +9,9 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
   User 
 } from 'firebase/auth';
 import { 
@@ -48,8 +51,18 @@ const googleProvider = new GoogleAuthProvider();
 
 // --- Authentication Services ---
 
+export const setAuthPersistence = async (remember: boolean) => {
+  try {
+    await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+  } catch (error) {
+    console.error("Error setting persistence:", error);
+  }
+};
+
 export const signInWithGoogle = async (): Promise<User> => {
   try {
+    // Default to local persistence for Google Login unless specified otherwise, 
+    // but usually handled by setAuthPersistence before this call if needed.
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error: any) {
@@ -88,12 +101,15 @@ export const signInWithGoogle = async (): Promise<User> => {
 };
 
 export const registerWithEmail = async (email: string, pass: string, name: string): Promise<User> => {
+  // Default to local persistence for new registrations
+  await setPersistence(auth, browserLocalPersistence);
   const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
   await updateProfile(userCredential.user, { displayName: name });
   return userCredential.user;
 };
 
 export const loginWithEmail = async (email: string, pass: string): Promise<User> => {
+  // Persistence is set via setAuthPersistence called from UI before this
   const userCredential = await signInWithEmailAndPassword(auth, email, pass);
   return userCredential.user;
 };

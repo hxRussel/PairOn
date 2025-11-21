@@ -859,14 +859,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
                           {language === 'it' ? 'Risoluzione (pixel)' : 'Resolution (pixel)'}
                         </label>
-                        <div className="flex items-center gap-2">
+                        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                            <input
                               type="text"
                               value={width}
                               onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)}
                               disabled={isReadOnly}
                               placeholder={language === 'it' ? 'Orizzontale' : 'Horizontal'}
-                              className={`flex-1 p-3 rounded-xl border outline-none text-center ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
+                              className={`p-3 rounded-xl border outline-none text-center w-full ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
                             />
                             <span className={`font-bold ${isDark ? 'text-white/50' : 'text-black/50'}`}>X</span>
                             <input
@@ -875,7 +875,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                               onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)}
                               disabled={isReadOnly}
                               placeholder={language === 'it' ? 'Verticale' : 'Vertical'}
-                              className={`flex-1 p-3 rounded-xl border outline-none text-center ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
+                              className={`p-3 rounded-xl border outline-none text-center w-full ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
                             />
                         </div>
                       </div>
@@ -975,7 +975,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                  )}
               </div>
               {rams.map((ram, index) => (
-                <div key={index} className="flex gap-3 items-center">
+                <div key={index} className={`flex flex-col md:flex-row gap-3 items-stretch md:items-center rounded-xl ${isDark ? 'bg-white/5 md:bg-transparent p-3 md:p-0' : 'bg-gray-50 md:bg-transparent p-3 md:p-0 border md:border-0 border-gray-200'}`}>
                   <div className="relative flex-1">
                      <input
                         type="text"
@@ -1003,7 +1003,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                   </div>
 
                   {!isReadOnly && rams.length > 1 && (
-                    <button onClick={() => handleRemoveRam(index)} className="p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
+                    <button onClick={() => handleRemoveRam(index)} className="p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors self-end md:self-center">
                       <Trash2 size={18} />
                     </button>
                   )}
@@ -1022,7 +1022,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                  )}
               </div>
               {storages.map((storage, index) => (
-                <div key={index} className="flex gap-3 items-center">
+                <div key={index} className={`flex flex-col md:flex-row gap-3 items-stretch md:items-center rounded-xl ${isDark ? 'bg-white/5 md:bg-transparent p-3 md:p-0' : 'bg-gray-50 md:bg-transparent p-3 md:p-0 border md:border-0 border-gray-200'}`}>
                    <div className="flex-1 flex gap-2">
                       <input
                           type="text"
@@ -1057,7 +1057,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                    </div>
 
                    {!isReadOnly && storages.length > 1 && (
-                    <button onClick={() => handleRemoveStorage(index)} className="p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
+                    <button onClick={() => handleRemoveStorage(index)} className="p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors self-end md:self-center">
                       <Trash2 size={18} />
                     </button>
                   )}
@@ -1087,9 +1087,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
             <div className="space-y-4">
                {cameras.map((cam, index) => (
-                 <div key={index} className={`p-4 rounded-2xl border flex flex-col md:flex-row gap-4 items-start md:items-center relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                 <div key={index} className={`p-4 rounded-2xl border flex flex-col md:flex-row gap-4 items-stretch md:items-center relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
                     {!isReadOnly && cameras.length > 1 && (
-                      <button onClick={() => handleRemoveCamera(index)} className="absolute top-2 right-2 text-red-400 hover:bg-red-500/10 p-2 rounded-full">
+                      <button onClick={() => handleRemoveCamera(index)} className="absolute top-2 right-2 text-red-400 hover:bg-red-500/10 p-2 rounded-full z-10">
                         <Trash2 size={16} />
                       </button>
                     )}
@@ -1119,11 +1119,11 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                        />
                     </div>
 
-                    <div className="flex items-end pb-2">
+                    <div className="flex items-end pb-0 md:pb-2">
                        <button
                         type="button"
                         onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)}
-                        className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
+                        className={`w-full md:w-auto px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
                       >
                         OIS
                       </button>

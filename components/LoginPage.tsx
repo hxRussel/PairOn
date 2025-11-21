@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthState, Language } from '../types';
-import { signInWithGoogle, loginWithEmail, resetUserPassword } from '../services/firebase';
-import { Eye, EyeOff, ArrowRight, Check, Loader as LoaderIcon, AlertCircle, X } from 'lucide-react';
+import { signInWithGoogle, loginWithEmail, resetUserPassword, setAuthPersistence } from '../services/firebase';
+import { Eye, EyeOff, ArrowRight, Check, Loader as LoaderIcon, AlertCircle, X, Square, CheckSquare } from 'lucide-react';
 import { Loader } from './Loader';
 
 interface LoginPageProps {
@@ -80,6 +80,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to true
   const [isLoading, setIsLoading] = useState(false);
   // Updated state to handle type (error vs success)
   const [modalState, setModalState] = useState<{show: boolean, message: string, type: 'error' | 'success'}>({
@@ -109,7 +110,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       googleBtn: "Accedi con Google",
       genericError: "Errore di connessione. Riprova.",
       emailReq: "Inserisci la tua email nel campo sopra per reimpostare la password.",
-      emailSent: "Email di recupero inviata! Controlla la tua posta (anche nello spam)."
+      emailSent: "Email di recupero inviata! Controlla la tua posta (anche nello spam).",
+      rememberMe: "Mantieni l'accesso"
     },
     en: {
       welcome: "Welcome Back",
@@ -129,7 +131,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       googleBtn: "Sign in with Google",
       genericError: "Connection error. Please try again.",
       emailReq: "Please enter your email in the field above to reset your password.",
-      emailSent: "Recovery email sent! Check your inbox (and spam folder)."
+      emailSent: "Recovery email sent! Check your inbox (and spam folder).",
+      rememberMe: "Keep me logged in"
     }
   };
 
@@ -139,6 +142,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
     e.preventDefault();
     setIsLoading(true);
     try {
+      // Set persistence first
+      await setAuthPersistence(rememberMe);
       await loginWithEmail(email, password);
       setAuthState(AuthState.DASHBOARD);
     } catch (error: any) {
@@ -189,6 +194,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
+      await setAuthPersistence(true); // Always persist google login for convenience unless user explicitly logs out
       await signInWithGoogle();
       setAuthState(AuthState.DASHBOARD);
     } catch (error: any) {
@@ -322,6 +328,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
+                </div>
+
+                {/* Remember Me Checkbox */}
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
+                   <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${rememberMe ? 'bg-pairon-mint border-pairon-mint' : (isDark ? 'border-white/20 hover:border-white/40' : 'border-gray-300 hover:border-gray-400')}`}>
+                      {rememberMe && <Check size={14} className="text-pairon-obsidian" strokeWidth={3} />}
+                   </div>
+                   <label className={`text-sm select-none cursor-pointer ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {text.rememberMe}
+                   </label>
                 </div>
 
                 <button 
