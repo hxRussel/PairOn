@@ -1,13 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Language } from '../types';
 
-// Helper to get the client safely
+// Helper to get the client safely supporting multiple build environments
 const getAiClient = () => {
-  const key = process.env.API_KEY;
+  // Prioritize strict process.env.API_KEY but fallback to VITE_ and REACT_APP_ prefixes
+  // which are required for client-side visibility in Vercel/Netlify deployments.
+  const key = process.env.API_KEY || 
+              // @ts-ignore - Handle Vite types potentially not being present
+              (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_KEY : undefined) ||
+              process.env.REACT_APP_API_KEY;
   
   if (!key) {
     console.error("GEMINI API KEY MISSING");
-    throw new Error("API Key not found. Check your .env file or build configuration.");
+    throw new Error("API Key not found. Please check Vercel Settings -> Environment Variables. Ensure you have added 'VITE_API_KEY'.");
   }
   return new GoogleGenAI({ apiKey: key });
 };
@@ -32,8 +37,8 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
     return response.text || (lang === 'it' ? "Non sono riuscito a generare un confronto al momento." : "Could not generate a comparison at this time.");
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    if (error.message && error.message.includes("API Key")) {
-      return lang === 'it' ? "Errore Configurazione: API Key mancante." : "Config Error: API Key missing.";
+    if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
+      return lang === 'it' ? "Errore Configurazione: API Key mancante o non valida su Vercel." : "Config Error: API Key missing or invalid on Vercel.";
     }
     return lang === 'it' ? "Si è verificato un errore durante la connessione all'assistente AI." : "An error occurred while connecting to the AI assistant.";
   }
