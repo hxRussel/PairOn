@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick, CheckCircle2 } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
@@ -326,6 +326,24 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   };
 
   const updateVideo = (field: keyof VideoSettings, value: any) => !isReadOnly && setVideoSettings({ ...videoSettings, [field]: value });
+  
+  // Pros & Cons Handlers
+  const handleAddPro = () => {
+    if (newPro.trim() && !isReadOnly) {
+      setPros([...pros, newPro.trim()]);
+      setNewPro('');
+    }
+  };
+  const handleRemovePro = (index: number) => !isReadOnly && setPros(pros.filter((_, i) => i !== index));
+
+  const handleAddCon = () => {
+    if (newCon.trim() && !isReadOnly) {
+      setCons([...cons, newCon.trim()]);
+      setNewCon('');
+    }
+  };
+  const handleRemoveCon = (index: number) => !isReadOnly && setCons(cons.filter((_, i) => i !== index));
+
   const generateRandomGradient = () => 'from-blue-600 to-indigo-900';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -484,6 +502,12 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                          <input type="text" value={display.brightness} onChange={(e) => updateDisplay(index, 'brightness', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="2000 nits" />
                       </div>
                    </div>
+                   
+                   {/* HDR & Dolby Vision Toggles */}
+                   <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
+                      <button type="button" onClick={() => !isReadOnly && updateDisplay(index, 'hasHdr', !display.hasHdr)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${display.hasHdr ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-300 text-gray-500 hover:bg-gray-100')}`}>HDR</button>
+                      <button type="button" onClick={() => !isReadOnly && updateDisplay(index, 'hasDolbyVision', !display.hasDolbyVision)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${display.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-300 text-gray-500 hover:bg-gray-100')}`}>Dolby Vision</button>
+                   </div>
                 </div>
               )})}
           </section>
@@ -493,8 +517,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className="flex items-center gap-2"><Cpu className="text-pairon-mint" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3></div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SmartSelector label="SoC / Processor" value={chip} onChange={setChip} optionsCategory="chips" defaultOptions={DEFAULT_CHIPS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
-              <SmartSelector label="IP Rating (Water/Dust)" value={ipRating} onChange={setIpRating} optionsCategory="ipRatings" defaultOptions={DEFAULT_IP_RATINGS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+              <SmartSelector label={language === 'it' ? 'SoC / Processore' : 'SoC / Processor'} value={chip} onChange={setChip} optionsCategory="chips" defaultOptions={DEFAULT_CHIPS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+              <SmartSelector label={language === 'it' ? 'Certificazione IP (Acqua/Polvere)' : 'IP Rating (Water/Dust)'} value={ipRating} onChange={setIpRating} optionsCategory="ipRatings" defaultOptions={DEFAULT_IP_RATINGS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
             </div>
 
             {/* Biometrics & Haptics */}
@@ -557,7 +581,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
             {/* Storage */}
             <div className="space-y-3">
-              <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><HardDrive size={12} /> Storage</label>{!isReadOnly && <button onClick={handleAddStorage} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
+              <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><HardDrive size={12} /> {language === 'it' ? 'Memoria' : 'Storage'}</label>{!isReadOnly && <button onClick={handleAddStorage} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
               {storages.map((storage, index) => (
                 <div key={index} className={`flex flex-col md:flex-row gap-3 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} p-3`}>
                    <div className="flex-1 flex gap-2 min-w-0">
@@ -574,7 +598,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           {/* Cameras Section */}
           <section className="space-y-6">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2"><Aperture className="text-red-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Cameras</h3></div>
+              <div className="flex items-center gap-2"><Aperture className="text-red-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Fotocamere' : 'Cameras'}</h3></div>
               {!isReadOnly && <button onClick={handleAddCamera} className="text-xs font-bold text-pairon-mint flex items-center gap-1"><Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}</button>}
             </div>
             <div className="space-y-4">
@@ -672,7 +696,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           <section className="space-y-6">
              <div className="flex items-center gap-2"><AppWindow className="text-indigo-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software & OS</h3></div>
              
-             <SmartSelector label="OS Version" value={os} onChange={setOs} optionsCategory="osVersions" defaultOptions={DEFAULT_OS_VERSIONS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+             <SmartSelector label={language === 'it' ? 'Versione OS' : 'OS Version'} value={os} onChange={setOs} optionsCategory="osVersions" defaultOptions={DEFAULT_OS_VERSIONS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
              
              {/* Custom UI */}
              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
@@ -727,6 +751,75 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                    <div className="relative">
                       <CurrencyIcon />
                       <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} disabled={isReadOnly} className={`w-full p-3 pl-10 rounded-xl border outline-none ${inputBg}`} placeholder="999" />
+                   </div>
+                </div>
+             </div>
+          </section>
+
+          {/* Pros & Cons Section */}
+          <section className="space-y-6">
+             <div className="flex items-center gap-2"><ThumbsUp className="text-pairon-mint" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Pro & Contro</h3></div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* PROS */}
+                <div className={`p-4 rounded-2xl border ${isDark ? 'border-green-500/20 bg-green-500/5' : 'border-green-200 bg-green-50'}`}>
+                   <h4 className="flex items-center gap-2 font-bold text-green-500 mb-3">
+                      <ThumbsUp size={18} /> {language === 'it' ? 'Pro (Vantaggi)' : 'Pros'}
+                   </h4>
+                   
+                   {!isReadOnly && (
+                      <div className="flex gap-2 mb-3">
+                         <input 
+                           type="text" 
+                           value={newPro} 
+                           onChange={(e) => setNewPro(e.target.value)} 
+                           onKeyDown={(e) => e.key === 'Enter' && handleAddPro()}
+                           placeholder={language === 'it' ? "Aggiungi un vantaggio..." : "Add a pro..."}
+                           className={`flex-1 p-2 rounded-lg border outline-none text-sm ${isDark ? 'bg-black/20 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-800'}`}
+                         />
+                         <button onClick={handleAddPro} className="p-2 bg-green-500 text-white rounded-lg"><Plus size={18} /></button>
+                      </div>
+                   )}
+                   
+                   <div className="space-y-2">
+                      {pros.map((item, idx) => (
+                         <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-black/5 dark:bg-white/5">
+                            <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{item}</span>
+                            {!isReadOnly && <button onClick={() => handleRemovePro(idx)} className="text-red-400 hover:text-red-500"><X size={14} /></button>}
+                         </div>
+                      ))}
+                      {pros.length === 0 && <p className="text-xs opacity-50 italic">{language === 'it' ? 'Nessun vantaggio aggiunto' : 'No pros added'}</p>}
+                   </div>
+                </div>
+
+                {/* CONS */}
+                <div className={`p-4 rounded-2xl border ${isDark ? 'border-red-500/20 bg-red-500/5' : 'border-red-200 bg-red-50'}`}>
+                   <h4 className="flex items-center gap-2 font-bold text-red-500 mb-3">
+                      <ThumbsDown size={18} /> {language === 'it' ? 'Contro (Svantaggi)' : 'Cons'}
+                   </h4>
+                   
+                   {!isReadOnly && (
+                      <div className="flex gap-2 mb-3">
+                         <input 
+                           type="text" 
+                           value={newCon} 
+                           onChange={(e) => setNewCon(e.target.value)} 
+                           onKeyDown={(e) => e.key === 'Enter' && handleAddCon()}
+                           placeholder={language === 'it' ? "Aggiungi uno svantaggio..." : "Add a con..."}
+                           className={`flex-1 p-2 rounded-lg border outline-none text-sm ${isDark ? 'bg-black/20 border-white/10 text-white placeholder-white/30' : 'bg-white border-gray-200 text-gray-800'}`}
+                         />
+                         <button onClick={handleAddCon} className="p-2 bg-red-500 text-white rounded-lg"><Plus size={18} /></button>
+                      </div>
+                   )}
+                   
+                   <div className="space-y-2">
+                      {cons.map((item, idx) => (
+                         <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-black/5 dark:bg-white/5">
+                            <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{item}</span>
+                            {!isReadOnly && <button onClick={() => handleRemoveCon(idx)} className="text-red-400 hover:text-red-500"><X size={14} /></button>}
+                         </div>
+                      ))}
+                      {cons.length === 0 && <p className="text-xs opacity-50 italic">{language === 'it' ? 'Nessun svantaggio aggiunto' : 'No cons added'}</p>}
                    </div>
                 </div>
              </div>
