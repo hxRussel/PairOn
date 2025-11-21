@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, Bot, User, Trash2, StopCircle, ArrowLeft, Smartphone, ChevronRight } from 'lucide-react';
-import { GoogleGenAI, Chat } from "@google/genai";
+import { Send, Sparkles, Bot, User, Trash2, StopCircle, ArrowLeft, Smartphone, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Chat } from "@google/genai";
 import { PhoneData } from '../services/firebase';
+import { createChatSession } from '../services/gemini';
 import { Language } from '../types';
 import { Loader } from './Loader';
 
@@ -19,6 +20,7 @@ interface Message {
   id: string;
   role: 'user' | 'model';
   text: string;
+  isError?: boolean;
 }
 
 const MiniPhoneCard: React.FC<{ phone: PhoneData, onClick: () => void, isDark: boolean }> = ({ phone, onClick, isDark }) => (
@@ -44,6 +46,7 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatSession, setChatSession] = useState<Chat | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const t = {
@@ -60,7 +63,9 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       ],
       disclaimer: "L'AI può commettere errori. Verifica le informazioni.",
       sending: "Sto analizzando...",
-      clear: "Nuova Chat"
+      clear: "Nuova Chat",
+      errorKey: "Errore API Key: Impossibile inizializzare l'AI. Contatta lo sviluppatore.",
+      errorGen: "Errore di connessione."
     },
     en: {
       title: "PairOn AI",
@@ -75,7 +80,9 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       ],
       disclaimer: "AI can make mistakes. Please verify info.",
       sending: "Analyzing...",
-      clear: "New Chat"
+      clear: "New Chat",
+      errorKey: "API Key Error: Could not initialize AI. Contact developer.",
+      errorGen: "Connection error."
     }
   };
 
@@ -89,58 +96,65 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
   // Initialize Chat Session
   useEffect(() => {
     const initChat = async () => {
-      if (!process.env.API_KEY) return;
+      try {
+        // Construct context from saved phones
+        const phoneContext = savedPhones.map(p => ({
+          id: p.id,
+          model: `${p.brand} ${p.model}`,
+          specs: {
+            chip: p.chip,
+            battery: p.battery?.capacity,
+            charging: p.battery?.wiredCharging,
+            display: p.displays?.[0] ? `${p.displays[0].size} ${p.displays[0].type} ${p.displays[0].refreshRate}` : 'N/A',
+            cameras: p.cameras?.map(c => `${c.type} ${c.megapixels}`).join(', '),
+            price: p.price,
+            launch: p.launchDate
+          }
+        }));
 
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
-      // Construct context from saved phones
-      const phoneContext = savedPhones.map(p => ({
-        id: p.id,
-        model: `${p.brand} ${p.model}`,
-        specs: {
-          chip: p.chip,
-          battery: p.battery?.capacity,
-          charging: p.battery?.wiredCharging,
-          display: p.displays?.[0] ? `${p.displays[0].size} ${p.displays[0].type} ${p.displays[0].refreshRate}` : 'N/A',
-          cameras: p.cameras?.map(c => `${c.type} ${c.megapixels}`).join(', '),
-          price: p.price,
-          launch: p.launchDate
-        }
-      }));
+        const systemInstruction = `
+          You are PairOn AI, a helpful smartphone expert.
+          The user is named ${userName}.
+          
+          CONTEXT:
+          The user has saved the following smartphones in their collection:
+          ${JSON.stringify(phoneContext)}
+          
+          INSTRUCTIONS:
+          1. Answer questions based strictly on the provided smartphone list.
+          2. If the user asks about a phone NOT in the list, you can use your general knowledge, but mention it's not in their saved list.
+          3. Be concise, objective, and helpful.
+          4. Format your answers nicely (use bullet points if comparing).
+          5. Reply in ${language === 'it' ? 'Italian' : 'English'}.
+          6. IMPORTANT: If you refer to a specific smartphone from the user's list as a suggestion or recommendation, you MUST append the following tag at the end of your response: [VIEW_ID: <id>]. Example: "The iPhone 15 has a great camera. [VIEW_ID: 12345]". If multiple phones are discussed/compared, append multiple tags like [VIEW_ID: 123][VIEW_ID: 456].
+        `;
 
-      const systemInstruction = `
-        You are PairOn AI, a helpful smartphone expert.
-        The user is named ${userName}.
-        
-        CONTEXT:
-        The user has saved the following smartphones in their collection:
-        ${JSON.stringify(phoneContext)}
-        
-        INSTRUCTIONS:
-        1. Answer questions based strictly on the provided smartphone list.
-        2. If the user asks about a phone NOT in the list, you can use your general knowledge, but mention it's not in their saved list.
-        3. Be concise, objective, and helpful.
-        4. Format your answers nicely (use bullet points if comparing).
-        5. Reply in ${language === 'it' ? 'Italian' : 'English'}.
-        6. IMPORTANT: If you refer to a specific smartphone from the user's list as a suggestion or recommendation, you MUST append the following tag at the end of your response: [VIEW_ID: <id>]. Example: "The iPhone 15 has a great camera. [VIEW_ID: 12345]". If multiple phones are discussed/compared, append multiple tags like [VIEW_ID: 123][VIEW_ID: 456].
-      `;
-
-      const chat = ai.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.7,
-        }
-      });
-
-      setChatSession(chat);
+        // Use the service wrapper which checks for API KEY presence
+        const chat = createChatSession(systemInstruction);
+        setChatSession(chat);
+        setInitError(null);
+      } catch (err) {
+        console.error("Chat Init Error:", err);
+        setInitError(text.errorKey);
+      }
     };
 
     initChat();
   }, [savedPhones, language, userName]);
 
   const handleSendMessage = async (content: string) => {
-    if (!content.trim() || !chatSession) return;
+    if (!content.trim()) return;
+    
+    if (!chatSession) {
+       // If chat session failed to init (missing key), show error message immediately
+       setMessages(prev => [...prev, {
+         id: Date.now().toString(),
+         role: 'model',
+         text: initError || text.errorKey,
+         isError: true
+       }]);
+       return;
+    }
 
     const newUserMsg: Message = {
       id: Date.now().toString(),
@@ -162,12 +176,17 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       };
 
       setMessages(prev => [...prev, newAiMsg]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini Error:", error);
+      const errorMessage = error.message?.includes("API Key") 
+        ? text.errorKey 
+        : (language === 'it' ? "Scusa, problema di connessione. Assicurati che l'app abbia accesso a internet." : "Connection issue. Ensure app has internet access.");
+      
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        text: language === 'it' ? "Scusa, ho avuto un problema tecnico. Riprova." : "Sorry, I encountered an error. Please try again."
+        text: errorMessage,
+        isError: true
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
@@ -177,7 +196,8 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
 
   const handleClearChat = () => {
     setMessages([]);
-    window.location.reload(); 
+    // Re-init handled by effect dependencies or simple reset
+    // Just clearing messages is enough for UI reset
   };
 
   return (
@@ -212,6 +232,14 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
 
       {/* Chat Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-hide">
+        {/* Critical Init Error Banner */}
+        {initError && (
+           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 mb-4 animate-pulse">
+              <AlertTriangle className="text-red-500 shrink-0" />
+              <p className="text-xs font-bold text-red-500">{initError}</p>
+           </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-0 animate-fade-in" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pairon-indigo to-pairon-mint flex items-center justify-center mb-6 shadow-lg shadow-pairon-mint/20">
@@ -261,9 +289,12 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
                 <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user' 
                     ? 'bg-gradient-to-br from-pairon-indigo to-pairon-blue text-white rounded-tr-sm shadow-lg shadow-pairon-indigo/20' 
-                    : (isDark ? 'bg-pairon-surface border border-white/10 text-gray-200 rounded-tl-sm' : 'bg-white border border-gray-100 text-gray-800 shadow-sm rounded-tl-sm')
+                    : (msg.isError 
+                        ? 'bg-red-500/10 border border-red-500/30 text-red-500 rounded-tl-sm' 
+                        : (isDark ? 'bg-pairon-surface border border-white/10 text-gray-200 rounded-tl-sm' : 'bg-white border border-gray-100 text-gray-800 shadow-sm rounded-tl-sm')
+                      )
                 }`}>
-                  {msg.role === 'model' && (
+                  {msg.role === 'model' && !msg.isError && (
                      <div className="flex items-center gap-2 mb-2 opacity-50 border-b border-gray-500/20 pb-1">
                         <Bot size={12} />
                         <span className="text-[10px] font-bold uppercase tracking-wider">PairOn AI</span>
