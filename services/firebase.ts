@@ -222,7 +222,8 @@ export interface CustomOptions {
   displayTypes: string[];
   cameraTypes: string[];
   uiVersions: string[]; 
-  ipRatings: string[]; // New
+  ipRatings: string[];
+  osVersions: string[];
 }
 
 // Subscribe to the current user's smartphone collection
@@ -308,7 +309,8 @@ export const subscribeToCustomOptions = (userId: string, callback: (options: Cus
         displayTypes: [],
         cameraTypes: [],
         uiVersions: [],
-        ipRatings: []
+        ipRatings: [],
+        osVersions: []
       });
     }
   });

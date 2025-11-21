@@ -32,8 +32,12 @@ const DEFAULT_STORAGE_TYPES = [
   "UFS 4.0", "UFS 3.1", "UFS 3.0", "UFS 2.2", "UFS 2.1", "NVMe", "eMMC 5.1"
 ];
 
-const DEFAULT_HAPTICS = [
+const DEFAULT_HAPTICS_IT = [
   "Buona", "Aptica", "Scarsa", "Eccellente", "Motore X-Axis"
+];
+
+const DEFAULT_HAPTICS_EN = [
+  "Good", "Haptic", "Poor", "Excellent", "X-Axis Motor"
 ];
 
 const DEFAULT_FINGERPRINT_TYPES = [
@@ -65,6 +69,10 @@ const DEFAULT_CAMERA_TYPES = [
 const DEFAULT_UI_VERSIONS = [
   "One UI 6.1", "One UI 6.0", "iOS 17", "iOS 18", "HyperOS", "OxygenOS 14", 
   "ColorOS 14", "OriginOS 4", "MagicOS 8.0", "Pixel UI", "Nothing OS 2.5"
+];
+
+const DEFAULT_OS_VERSIONS = [
+  "Android 15", "Android 14", "iOS 18", "iOS 17", "HarmonyOS 4", "Android 16", "iOS 19"
 ];
 
 const DEFAULT_IP_RATINGS = [
@@ -928,7 +936,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                        
                        <div>
                           <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                            Stabilizzazione
+                            {language === 'it' ? 'Stabilizzazione' : 'Stabilization'}
                           </label>
                           <div 
                             onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)}
@@ -1384,7 +1392,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 value={haptics}
                 onChange={setHaptics}
                 optionsCategory="haptics"
-                defaultOptions={DEFAULT_HAPTICS}
+                defaultOptions={language === 'it' ? DEFAULT_HAPTICS_IT : DEFAULT_HAPTICS_EN}
                 isReadOnly={isReadOnly}
                 isDark={isDark}
                 placeholder={language === 'it' ? 'es. Ottima, Motore X-Axis...' : 'e.g. Great, X-Axis Motor...'}
@@ -1405,16 +1413,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                    {language === 'it' ? 'Versione OS' : 'OS Version'}
-                  </label>
-                  <input
-                    type="text"
+                 <SmartSelector 
+                    label={language === 'it' ? 'Versione OS' : 'OS Version'}
                     value={os}
-                    onChange={(e) => setOs(e.target.value)}
-                    disabled={isReadOnly}
+                    onChange={setOs}
+                    optionsCategory="osVersions"
+                    defaultOptions={DEFAULT_OS_VERSIONS}
+                    isReadOnly={isReadOnly}
+                    isDark={isDark}
                     placeholder={language === 'it' ? 'es. Android 14' : 'e.g. Android 14'}
-                    className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                    language={language}
                   />
                </div>
 
@@ -1586,7 +1594,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                   <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
                     <ThumbsDown size={16} />
                   </div>
-                  <h3 className={`font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>Contro</h3>
+                  <h3 className={`font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {language === 'it' ? 'Contro' : 'Cons'}
+                  </h3>
                 </div>
                 
                 {!isReadOnly && (
