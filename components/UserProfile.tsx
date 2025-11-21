@@ -11,10 +11,9 @@ interface UserProfileProps {
   onLogout: () => void;
   isDark: boolean;
   language: Language;
-  isGuest?: boolean;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, isDark, language, isGuest = false }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, isDark, language }) => {
   const user = auth.currentUser;
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.displayName || '');
@@ -63,8 +62,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       save: "Salva Modifiche",
       cancel: "Annulla",
       editProfile: "Modifica Profilo",
-      guestMode: "Modalità Ospite - Sola Lettura",
-      guestAccess: "Accesso Guest",
       accountStatus: "Stato Account",
       devSwitch: "Dev Switch:",
       free: "Free",
@@ -85,8 +82,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       },
       uploadError: "Impossibile caricare l'immagine.",
       uploadGenericError: "Errore caricamento.",
-      guestNoPhoto: "Immagine bloccata per Ospiti",
-      guestRestrictedMsg: "Gli utenti ospiti non possono modificare l'immagine del profilo e non possono aggiungere foto agli smartphone."
     },
     en: {
       title: "User Profile",
@@ -94,8 +89,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       save: "Save Changes",
       cancel: "Cancel",
       editProfile: "Edit Profile",
-      guestMode: "Guest Mode - Read Only",
-      guestAccess: "Guest Access",
       accountStatus: "Account Status",
       devSwitch: "Dev Switch:",
       free: "Free",
@@ -116,8 +109,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       },
       uploadError: "Unable to upload image.",
       uploadGenericError: "Upload error.",
-      guestNoPhoto: "Image locked for Guests",
-      guestRestrictedMsg: "Guest users cannot change profile picture and cannot add photos to smartphones."
     }
   };
 
@@ -131,11 +122,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       await updateUserProfile(newName);
       
       // 2. Update Image in Firestore
-      if (!isGuest) {
-          // If it's a new base64 upload OR if it's explicitly empty (user deleted it), save it.
-          if (newPhotoURL === '' || newPhotoURL.startsWith('data:image')) {
-             await saveUserProfileImage(user.uid, newPhotoURL);
-          }
+      // If it's a new base64 upload OR if it's explicitly empty (user deleted it), save it.
+      if (newPhotoURL === '' || newPhotoURL.startsWith('data:image')) {
+         await saveUserProfileImage(user.uid, newPhotoURL);
       }
 
       setIsEditing(false);
@@ -148,10 +137,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
   };
 
   const handlePhotoClick = () => {
-    if (isGuest) {
-      setUploadError(text.guestRestrictedMsg);
-      return;
-    }
     if (!isEditing) return;
     setUploadError(null);
     // Trigger file input click
@@ -159,14 +144,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
   };
 
   const handleRemovePhoto = () => {
-    if (!isEditing || isGuest) return;
+    if (!isEditing) return;
     setNewPhotoURL('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user || isGuest) return;
+    if (!file || !user) return;
 
     setIsUploading(true);
     setUploadError(null);
@@ -240,17 +225,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                        <User size={40} />
                      </div>
                    )}
-
-                   {/* Guest Lock Overlay */}
-                   {isGuest && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <Lock size={24} className="text-white/70" />
-                      </div>
-                   )}
                 </div>
                 
                 {/* Hover Effect for Camera */}
-                {!isGuest && isEditing && !isUploading && (
+                {isEditing && !isUploading && (
                   <div 
                     className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     onClick={handlePhotoClick}
@@ -260,7 +238,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                 )}
                 
                 {/* Trash Icon for Deletion */}
-                {isEditing && !isGuest && newPhotoURL && (
+                {isEditing && newPhotoURL && (
                    <button
                      onClick={handleRemovePhoto}
                      className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors z-20"
@@ -280,11 +258,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                   </div>
                   <span>{uploadError}</span>
                 </div>
-              )}
-              
-              {/* Guest Warning Label */}
-              {isGuest && isEditing && !uploadError && (
-                 <span className="text-xs text-yellow-500 font-medium mt-1">{text.guestNoPhoto}</span>
               )}
             </div>
 
@@ -311,10 +284,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                       onClick={() => { 
                         setIsEditing(false); 
                         setNewName(user?.displayName || ''); 
-                        // Reset preview
                         setUploadError(null);
-                        // Re-fetch or reset photo state (subscription will handle it if not saved, but explicit reset here is good UI)
-                        // Just closing edit mode is enough as useEffect will re-sync if needed, but let's just hide input.
                       }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-200 hover:bg-gray-300'}`}
                     >
@@ -328,7 +298,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                     <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.displayName || 'User'}</h3>
                     {userSettings.isPremium && <Crown size={20} className="text-yellow-400 fill-yellow-400" />}
                   </div>
-                  <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email || text.guestAccess}</p>
+                  <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email}</p>
                   
                   <button 
                     onClick={() => setIsEditing(true)}
@@ -336,13 +306,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                   >
                     {text.editProfile}
                   </button>
-
-                  {isGuest && (
-                    <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-500 text-xs font-medium">
-                      <AlertTriangle size={10} />
-                      {text.guestMode}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

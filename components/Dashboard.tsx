@@ -302,7 +302,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   setThemeSetting,
   effectiveTheme
 }) => {
-  const [userName, setUserName] = useState<string>('Guest');
+  const [userName, setUserName] = useState<string>('User');
   const [activeTab, setActiveTab] = useState<number>(0);
   const [savedPhones, setSavedPhones] = useState<PhoneData[]>([]);
   const [loadingPhones, setLoadingPhones] = useState(true);
@@ -340,8 +340,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const textColor = isDark ? 'text-pairon-ghost' : 'text-pairon-obsidian';
   const subTextColor = isDark ? 'text-gray-400' : 'text-gray-500';
   const navBg = isDark ? 'bg-pairon-surface/90 border-white/5 text-gray-400' : 'bg-[#E5E5EA]/80 border-white/40 text-gray-400';
-
-  const isGuest = auth.currentUser?.isAnonymous ?? false;
 
   useEffect(() => {
     // Check LocalStorage for tutorial state
@@ -631,7 +629,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         isDark={isDark}
         initialData={editingPhone || viewingPhone}
         isReadOnly={!!viewingPhone}
-        isGuest={isGuest}
       />
     );
   }
@@ -1319,7 +1316,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         onLogout={handleLogout}
         isDark={isDark}
         language={language}
-        isGuest={isGuest}
       />
 
       <DeleteConfirmationModal 

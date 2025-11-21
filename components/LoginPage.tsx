@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
 import { signInWithGoogle, loginWithEmail, resetUserPassword } from '../services/firebase';
-import { Eye, EyeOff, ArrowRight, Check, User, Loader as LoaderIcon, AlertCircle, X, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Check, Loader as LoaderIcon, AlertCircle, X } from 'lucide-react';
 import { Loader } from './Loader';
 
 interface LoginPageProps {
@@ -63,65 +63,12 @@ const ErrorModal: React.FC<{ message: string; onClose: () => void; isDark: boole
   </div>
 );
 
-const GuestWarningModal: React.FC<{ onConfirm: () => void; onCancel: () => void; isDark: boolean; language: Language }> = ({ onConfirm, onCancel, isDark, language }) => {
-  const text = language === 'it' 
-    ? {
-      title: "Accesso Ospite",
-      warning: "Attenzione: effettuando l'accesso come ospite i tuoi dati (smartphone salvati e preferenze) verranno salvati solo localmente su questo dispositivo.\n\nSe cancelli la cache o cambi dispositivo, i dati andranno persi e non saranno sincronizzati in cloud.",
-      confirm: "Ho capito, continua",
-      cancel: "Annulla"
-    }
-    : {
-      title: "Guest Access",
-      warning: "Warning: by logging in as a guest, your data (saved smartphones and preferences) will be saved locally on this device only.\n\nIf you clear your cache or switch devices, your data will be lost and not synced to the cloud.",
-      confirm: "I understand, continue",
-      cancel: "Cancel"
-    };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className={`${isDark ? 'bg-pairon-surface border-yellow-500/30' : 'bg-white border-yellow-200'} border rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden transform transition-all scale-100`}>
-        <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
-        
-        <div className="flex flex-col items-center text-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-            <AlertTriangle size={24} />
-          </div>
-          
-          <div>
-            <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{text.title}</h3>
-            <p className={`text-xs leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              {text.warning}
-            </p>
-          </div>
-
-          <div className="flex flex-col w-full gap-2 mt-2">
-            <button 
-              onClick={onConfirm}
-              className="w-full py-3 rounded-xl font-bold bg-yellow-500 hover:bg-yellow-600 text-black transition-colors shadow-lg shadow-yellow-500/20"
-            >
-              {text.confirm}
-            </button>
-            <button 
-              onClick={onCancel}
-              className={`w-full py-3 rounded-xl font-medium transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
-            >
-              {text.cancel}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLanguage, theme }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorState, setErrorState] = useState<{show: boolean, message: string}>({show: false, message: ''});
-  const [showGuestWarning, setShowGuestWarning] = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -136,7 +83,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       or: "OPPURE",
       noAccount: "Non hai un account?",
       register: "Registrati qui",
-      guest: "Continua come ospite",
       heroTitle: "Trova il tuo smartphone perfetto.",
       heroSubtitle: "Inizia a comparare smartphone!",
       feat1: "Analisi basata su AI",
@@ -157,7 +103,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       or: "OR",
       noAccount: "Don't have an account?",
       register: "Sign up here",
-      guest: "Continue as Guest",
       heroTitle: "Find your perfect smartphone.",
       heroSubtitle: "Start comparing smartphones!",
       feat1: "AI powered analysis",
@@ -223,10 +168,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
     }
   };
 
-  const confirmGuestAccess = () => {
-    setAuthState(AuthState.DASHBOARD);
-  };
-
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
@@ -249,16 +190,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
           message={errorState.message} 
           onClose={() => setErrorState({ ...errorState, show: false })} 
           isDark={isDark}
-        />
-      )}
-
-      {/* Guest Warning Modal */}
-      {showGuestWarning && (
-        <GuestWarningModal 
-          onConfirm={confirmGuestAccess}
-          onCancel={() => setShowGuestWarning(false)}
-          isDark={isDark}
-          language={language}
         />
       )}
 
@@ -386,15 +317,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
                    )}
                 </button>
               </form>
-
-              <button 
-                type="button"
-                onClick={() => setShowGuestWarning(true)}
-                className={`w-full mt-3 font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 border ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-200 border-white/5' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'}`}
-              >
-                <User size={18} />
-                {text.guest}
-              </button>
 
               <div className="relative py-6">
                 <div className="absolute inset-0 flex items-center">

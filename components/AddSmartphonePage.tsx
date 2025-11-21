@@ -12,7 +12,6 @@ interface AddSmartphonePageProps {
   isDark: boolean;
   initialData?: PhoneData | null; // If present, we are in EDIT mode
   isReadOnly?: boolean; // If true, disable inputs
-  isGuest?: boolean; // New prop to handle guest restrictions
 }
 
 // --- DEFAULTS FOR SMART SELECTORS ---
@@ -138,7 +137,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   isDark,
   initialData,
   isReadOnly = false,
-  isGuest = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,10 +234,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     : (isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900');
   
   const labelColor = isDark ? 'text-gray-400' : 'text-gray-500';
-
-  const guestWarningText = language === 'it' 
-      ? "Gli utenti ospiti non possono modificare l'immagine del profilo e non possono aggiungere foto agli smartphone."
-      : "Guest users cannot change profile picture and cannot add photos to smartphones.";
 
   // Fetch Currency Settings
   useEffect(() => {
@@ -342,7 +336,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   }, [initialData]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReadOnly || isGuest) return; // Block for Guest
+    if (isReadOnly) return;
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
@@ -352,7 +346,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   };
 
   const handleRemoveImage = () => {
-    if (isReadOnly || isGuest) return; // Block for Guest
+    if (isReadOnly) return;
     setImageFile(null);
     setPreviewUrl(null);
     setImageDeleted(true);
@@ -510,19 +504,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     let uploadedImageUrl = initialData?.imageUrl || '';
     
     // Logic to handle deletion or new upload
-    // Only allow image modifications if NOT a guest
-    if (!isGuest) {
-      if (imageDeleted) {
-        uploadedImageUrl = '';
-      }
+    if (imageDeleted) {
+      uploadedImageUrl = '';
+    }
 
-      // Try upload image if exists and changed
-      if (imageFile) {
-        try {
-          uploadedImageUrl = await uploadSmartphoneImage(auth.currentUser.uid, imageFile);
-        } catch (error) {
-          console.error("Image upload failed, saving data anyway", error);
-        }
+    // Try upload image if exists and changed
+    if (imageFile) {
+      try {
+        uploadedImageUrl = await uploadSmartphoneImage(auth.currentUser.uid, imageFile);
+      } catch (error) {
+        console.error("Image upload failed, saving data anyway", error);
       }
     }
 
@@ -709,38 +700,26 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           {/* SECTION 1: Identity */}
           <div className="flex flex-col md:flex-row gap-6 items-start">
             
-            {/* Image Section - Larger and Action Buttons */}
+            {/* Image Section */}
             <div className="flex gap-6 items-start">
-               <div 
+              <div 
                 onClick={() => {
                   if (previewUrl) {
                     setIsImageFullscreen(true);
-                  } else if (isGuest) {
-                     setError(guestWarningText);
                   } else if (!isReadOnly) {
                     fileInputRef.current?.click();
                   }
                 }}
-                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || (!isReadOnly)) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && !isGuest && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
+                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || (!isReadOnly)) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
               >
-                <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" disabled={isReadOnly || isGuest} />
+                <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" disabled={isReadOnly} />
                 
-                {/* Guest Block Overlay for Image */}
-                {isGuest && !previewUrl && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 p-4 text-center backdrop-blur-[1px]">
-                    <Lock size={24} className="text-white/70 mb-2" />
-                    <span className="text-xs text-white/80 font-medium">
-                      {language === 'it' ? 'Immagini disabilitate per Ospiti' : 'Images disabled for Guests'}
-                    </span>
-                  </div>
-                )}
-
                 {previewUrl ? (
                   <>
                     <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                     {/* Fullscreen Overlay Hint */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                       <Maximize2 className="text-white drop-shadow-md" size={32} />
+                      <Maximize2 className="text-white drop-shadow-md" size={32} />
                     </div>
                   </>
                 ) : (
@@ -753,25 +732,25 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 )}
               </div>
 
-              {/* Action Buttons (Only if Not Read Only AND Not Guest) */}
-              {!isReadOnly && !isGuest && (
+              {/* Action Buttons (Only if Not Read Only) */}
+              {!isReadOnly && (
                 <div className="flex flex-col gap-3 pt-2">
-                   <button 
-                     onClick={() => fileInputRef.current?.click()}
-                     className="flex items-center gap-2 px-4 py-3 rounded-xl bg-pairon-mint text-pairon-obsidian shadow-md hover:brightness-110 transition-all font-medium"
-                   >
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-pairon-mint text-pairon-obsidian shadow-md hover:brightness-110 transition-all font-medium"
+                  >
                       <RefreshCw size={18} />
                       <span>{language === 'it' ? 'Cambia' : 'Change'}</span>
-                   </button>
-                   {previewUrl && (
-                     <button 
-                       onClick={handleRemoveImage}
-                       className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all font-medium"
-                     >
+                  </button>
+                  {previewUrl && (
+                    <button 
+                      onClick={handleRemoveImage}
+                      className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all font-medium"
+                    >
                         <Trash2 size={18} />
                         <span>{language === 'it' ? 'Elimina' : 'Delete'}</span>
-                     </button>
-                   )}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
