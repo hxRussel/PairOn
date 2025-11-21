@@ -1,15 +1,19 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Language } from '../types';
 
 // Helper to get the client strictly from process.env.API_KEY as per guidelines
 const getAiClient = () => {
+  // Strictly following guidelines to use process.env.API_KEY
   // @ts-ignore
   const key = process.env.API_KEY;
   
+  console.log("Gemini Service: Initializing client...");
+  
   if (!key) {
-    console.error("GEMINI API KEY MISSING in process.env.API_KEY");
-    // We throw because the app cannot function without it and guidelines imply it is pre-configured.
-    throw new Error("API Key mancante. Assicurati che process.env.API_KEY sia configurato.");
+    console.error("Gemini Service CRITICAL ERROR: process.env.API_KEY is missing.");
+    console.warn("Troubleshooting: If you are on Vercel/Vite, ensure 'API_KEY' is set in your Vercel Project Settings environment variables.");
+    throw new Error("API Key missing. Please check process.env.API_KEY configuration.");
   }
 
   return new GoogleGenAI({ apiKey: key });
@@ -34,7 +38,7 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
 
     return response.text || (lang === 'it' ? "Non sono riuscito a generare un confronto al momento." : "Could not generate a comparison at this time.");
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error in getSmartphoneComparison:", error);
     if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
       return lang === 'it' ? "Errore: Chiave API non valida o mancante." : "Config Error: API Key missing.";
     }

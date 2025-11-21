@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick, CheckCircle2, Droplets } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
@@ -479,7 +479,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       <SmartSelector label={language === 'it' ? 'Tecnologia' : 'Technology'} value={display.type} onChange={(val) => updateDisplay(index, 'type', val)} optionsCategory="displayTypes" defaultOptions={DEFAULT_DISPLAY_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
                       
                       <div>
-                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Maximize2 size={12} /> {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}</label>
+                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-blue-400`}><Maximize2 size={12} /> {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}</label>
                          <input type="text" value={display.size} onChange={(e) => updateDisplay(index, 'size', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder='6.7"' />
                       </div>
                       
@@ -498,7 +498,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       </div>
                       
                       <div>
-                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Sun size={12} className="text-yellow-500" /> {language === 'it' ? 'Luminosità (Nits)' : 'Brightness (Nits)'}</label>
+                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-yellow-500`}><Sun size={12} /> {language === 'it' ? 'Luminosità (Nits)' : 'Brightness (Nits)'}</label>
                          <input type="text" value={display.brightness} onChange={(e) => updateDisplay(index, 'brightness', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="2000 nits" />
                       </div>
                    </div>
@@ -514,7 +514,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
           {/* Hardware Section */}
           <section className="space-y-6">
-            <div className="flex items-center gap-2"><Cpu className="text-pairon-mint" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3></div>
+            <div className="flex items-center gap-2"><Cpu className="text-indigo-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3></div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SmartSelector label={language === 'it' ? 'SoC / Processore' : 'SoC / Processor'} value={chip} onChange={setChip} optionsCategory="chips" defaultOptions={DEFAULT_CHIPS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
@@ -649,7 +649,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 </div>
                 
                 <div>
-                   <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Zap size={12} className="text-yellow-400" /> {language === 'it' ? 'Ricarica Cablata (W)' : 'Wired Charging (W)'}</label>
+                   <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-yellow-400`}><Zap size={12} /> {language === 'it' ? 'Ricarica Cablata (W)' : 'Wired Charging (W)'}</label>
                    <input type="text" value={wiredCharging} onChange={(e) => setWiredCharging(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="80W" />
                 </div>
              </div>
@@ -694,7 +694,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           
           {/* Software Section */}
           <section className="space-y-6">
-             <div className="flex items-center gap-2"><AppWindow className="text-indigo-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software & OS</h3></div>
+             <div className="flex items-center gap-2"><AppWindow className="text-purple-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software & OS</h3></div>
              
              <SmartSelector label={language === 'it' ? 'Versione OS' : 'OS Version'} value={os} onChange={setOs} optionsCategory="osVersions" defaultOptions={DEFAULT_OS_VERSIONS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
              
@@ -729,7 +729,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
           {/* Availability & Price */}
           <section className="space-y-6">
-             <div className="flex items-center gap-2"><CalendarDays className="text-yellow-500" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Disponibilità & Prezzo' : 'Availability & Price'}</h3></div>
+             <div className="flex items-center gap-2"><CalendarDays className="text-orange-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Disponibilità & Prezzo' : 'Availability & Price'}</h3></div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
