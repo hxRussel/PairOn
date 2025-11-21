@@ -93,11 +93,12 @@ export const logoutUser = async (): Promise<void> => {
   await signOut(auth);
 };
 
-export const updateUserProfile = async (name: string, photoURL: string): Promise<void> => {
+// Modified to only update Display Name in Auth to avoid "URL too long" error with Base64 images
+export const updateUserProfile = async (name: string): Promise<void> => {
   if (auth.currentUser) {
     await updateProfile(auth.currentUser, {
-      displayName: name,
-      photoURL: photoURL
+      displayName: name
+      // photoURL is now handled via Firestore (saveUserProfileImage)
     });
   }
 };
@@ -374,13 +375,31 @@ const compressAndConvertToBase64 = (file: File): Promise<string> => {
 };
 
 export const uploadProfileImage = async (userId: string, file: File): Promise<string> => {
-  // Previously used Storage, now uses direct Base64 compression
   return await compressAndConvertToBase64(file);
 };
 
 export const uploadSmartphoneImage = async (userId: string, file: File): Promise<string> => {
-  // Previously used Storage, now uses direct Base64 compression
   return await compressAndConvertToBase64(file);
 };
+
+// NEW: Save User Profile Image to Firestore (bypassing Auth photoURL limits)
+export const saveUserProfileImage = async (userId: string, base64: string) => {
+  await setDoc(doc(db, `users/${userId}/settings/profile`), {
+    photoBase64: base64
+  }, { merge: true });
+};
+
+// NEW: Subscribe to User Profile Image from Firestore
+export const subscribeToUserProfileImage = (userId: string, callback: (base64: string | null) => void) => {
+  const docRef = doc(db, `users/${userId}/settings/profile`);
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists() && doc.data().photoBase64) {
+      callback(doc.data().photoBase64);
+    } else {
+      callback(null);
+    }
+  });
+};
+
 
 export { auth, db };

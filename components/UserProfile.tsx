@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, updateUserProfile, setUserPremiumStatus, subscribeToUserSettings, UserSettings, uploadProfileImage } from '../services/firebase';
+import { auth, updateUserProfile, setUserPremiumStatus, subscribeToUserSettings, UserSettings, uploadProfileImage, saveUserProfileImage, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
 import { X, User, Camera, Crown, Check, X as XIcon, Shield, Code, AlertTriangle } from 'lucide-react';
 import { Language } from '../types';
@@ -16,6 +17,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
   const user = auth.currentUser;
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.displayName || '');
+  // newPhotoURL holds the "preview" (could be base64 from file upload or existing URL)
   const [newPhotoURL, setNewPhotoURL] = useState(user?.photoURL || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -28,13 +30,26 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
   useEffect(() => {
     if (isOpen && user) {
       setNewName(user.displayName || '');
-      setNewPhotoURL(user.photoURL || '');
       setUploadError(null);
       
-      const unsubscribe = subscribeToUserSettings(user.uid, (settings) => {
+      // Listen to settings
+      const unsubscribeSettings = subscribeToUserSettings(user.uid, (settings) => {
         setUserSettings(settings);
       });
-      return () => unsubscribe();
+
+      // Listen to Profile Image from Firestore (overrides Auth photoURL)
+      const unsubscribeProfile = subscribeToUserProfileImage(user.uid, (base64) => {
+         if (base64) {
+            setNewPhotoURL(base64);
+         } else {
+            setNewPhotoURL(user.photoURL || '');
+         }
+      });
+
+      return () => {
+        unsubscribeSettings();
+        unsubscribeProfile();
+      };
     }
   }, [isOpen, user]);
 
@@ -105,7 +120,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
     if (!user) return;
     setIsLoading(true);
     try {
-      await updateUserProfile(newName, newPhotoURL);
+      // 1. Update Name in Auth
+      await updateUserProfile(newName);
+      
+      // 2. Update Image in Firestore if it's a Base64 string (new upload)
+      if (newPhotoURL && newPhotoURL.startsWith('data:image')) {
+         await saveUserProfileImage(user.uid, newPhotoURL);
+      }
+
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update profile", error);
@@ -130,9 +152,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
     setUploadError(null);
 
     try {
-      // Now returns a Base64 string instead of a storage URL
-      const downloadURL = await uploadProfileImage(user.uid, file);
-      setNewPhotoURL(downloadURL);
+      // Now returns a Base64 string
+      const base64 = await uploadProfileImage(user.uid, file);
+      setNewPhotoURL(base64);
     } catch (error: any) {
       console.error("Upload failed:", error);
       setUploadError(text.uploadGenericError);
@@ -243,7 +265,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                       onClick={() => { 
                         setIsEditing(false); 
                         setNewName(user?.displayName || ''); 
-                        setNewPhotoURL(user?.photoURL || '');
+                        // Reset preview to what's in Auth or Firestore (via subscription effect it will reset)
                         setUploadError(null);
                       }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-200 hover:bg-gray-300'}`}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
 import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap } from 'lucide-react';
-import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions } from '../services/firebase';
+import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
 import AddSmartphonePage from './AddSmartphonePage';
@@ -303,6 +303,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeTab, setActiveTab] = useState<number>(0);
   const [savedPhones, setSavedPhones] = useState<PhoneData[]>([]);
   const [loadingPhones, setLoadingPhones] = useState(true);
+  const [customAvatar, setCustomAvatar] = useState<string | null>(null);
   
   // Modal States
   const [isAddingPhone, setIsAddingPhone] = useState(false);
@@ -355,9 +356,15 @@ const Dashboard: React.FC<DashboardProps> = ({
          setUserSettings(settings);
       });
 
+      // Subscribe to Profile Image from Firestore
+      const unsubscribeProfile = subscribeToUserProfileImage(auth.currentUser.uid, (base64) => {
+         setCustomAvatar(base64);
+      });
+
       return () => {
         unsubscribePhones();
         unsubscribeSettings();
+        unsubscribeProfile();
       };
     } else {
       setLoadingPhones(false);
@@ -1226,7 +1233,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex-shrink-0 cursor-pointer hover:scale-105 transition-transform" onClick={() => setIsProfileOpen(true)}>
               <div className={`w-12 h-12 rounded-full p-1 shadow-sm border ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-100'}`}>
                  <div className="w-full h-full rounded-full overflow-hidden bg-pairon-indigo/10 flex items-center justify-center text-pairon-indigo font-bold text-lg">
-                   {auth.currentUser?.photoURL ? (
+                   {customAvatar ? (
+                     <img src={customAvatar} alt="User" className="w-full h-full object-cover" />
+                   ) : auth.currentUser?.photoURL ? (
                      <img src={auth.currentUser.photoURL} alt="User" className="w-full h-full object-cover" />
                    ) : (
                      (auth.currentUser?.displayName || userName).charAt(0).toUpperCase()
