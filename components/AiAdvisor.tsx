@@ -64,7 +64,7 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       disclaimer: "L'AI può commettere errori. Verifica le informazioni.",
       sending: "Sto analizzando...",
       clear: "Nuova Chat",
-      errorKey: "ERRORE CONFIGURAZIONE: API Key mancante o non valida. Verifica le impostazioni di Vercel.",
+      errorKey: "ERRORE CHIAVE API: La chiave non è stata trovata. Vai su Vercel -> Deployments -> Redeploy per applicare le modifiche.",
       errorGen: "Errore di connessione. Riprova.",
       sessionFail: "Impossibile avviare la sessione AI."
     },
@@ -82,7 +82,7 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       disclaimer: "AI can make mistakes. Please verify info.",
       sending: "Analyzing...",
       clear: "New Chat",
-      errorKey: "CONFIG ERROR: API Key missing or invalid. Check Vercel settings.",
+      errorKey: "API KEY ERROR: Key not found. Please go to Vercel -> Deployments -> Redeploy to apply settings.",
       errorGen: "Connection error. Please try again.",
       sessionFail: "Could not start AI session."
     }
@@ -259,7 +259,7 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 mb-4 animate-pulse">
               <AlertTriangle className="text-red-500 shrink-0 mt-0.5" />
               <div>
-                 <p className="text-xs font-bold text-red-500 mb-1">System Error</p>
+                 <p className="text-xs font-bold text-red-500 mb-1">Errore Configurazione</p>
                  <p className="text-xs text-red-400 opacity-80">{initError}</p>
               </div>
            </div>

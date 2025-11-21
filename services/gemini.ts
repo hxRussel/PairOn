@@ -3,17 +3,30 @@ import { Language } from '../types';
 
 // Helper to get the client safely supporting multiple build environments
 const getAiClient = () => {
-  // Prioritize strict process.env.API_KEY but fallback to VITE_ and REACT_APP_ prefixes
-  // which are required for client-side visibility in Vercel/Netlify deployments.
-  const key = process.env.API_KEY || 
-              // @ts-ignore - Handle Vite types potentially not being present
-              (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_KEY : undefined) ||
-              process.env.REACT_APP_API_KEY;
+  let key = '';
+
+  // 1. Try Vite Standard (import.meta.env) - This is the standard for Vercel + Vite
+  // We check this FIRST because process.env might be empty in the browser
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+      // @ts-ignore
+      key = import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {
+    console.warn("Error accessing import.meta", e);
+  }
+
+  // 2. Fallback to process.env (Legacy/Node compatibility)
+  if (!key && typeof process !== 'undefined' && process.env) {
+    key = process.env.API_KEY || process.env.REACT_APP_API_KEY || process.env.VITE_API_KEY || '';
+  }
   
   if (!key) {
-    console.error("GEMINI API KEY MISSING");
-    throw new Error("API Key not found. Please check Vercel Settings -> Environment Variables. Ensure you have added 'VITE_API_KEY'.");
+    console.error("GEMINI API KEY MISSING. Checked: import.meta.env.VITE_API_KEY and process.env.API_KEY");
+    throw new Error("API Key mancante. IMPORTANTE: Dopo aver aggiunto la chiave su Vercel, devi fare il REDEPLOY.");
   }
+
   return new GoogleGenAI({ apiKey: key });
 };
 
@@ -38,7 +51,7 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
-      return lang === 'it' ? "Errore Configurazione: API Key mancante o non valida su Vercel." : "Config Error: API Key missing or invalid on Vercel.";
+      return lang === 'it' ? "Errore: Chiave API non valida o mancante. Fai un Redeploy su Vercel." : "Config Error: API Key missing. Please Redeploy on Vercel.";
     }
     return lang === 'it' ? "Si è verificato un errore durante la connessione all'assistente AI." : "An error occurred while connecting to the AI assistant.";
   }
