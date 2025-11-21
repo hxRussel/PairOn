@@ -245,8 +245,13 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
                if(match[1]) ids.push(match[1].trim());
             }
             
-            // Clean text for display
+            // Clean text for display by removing ID tags
             const cleanText = originalText.replace(viewIdRegex, '').trim();
+
+            // Process Markdown Bold (**text**)
+            const formattedContent = cleanText.split('**').map((part, i) => 
+              i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+            );
 
             return (
               <div 
@@ -264,7 +269,9 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
                         <span className="text-[10px] font-bold uppercase tracking-wider">PairOn AI</span>
                      </div>
                   )}
-                  {cleanText}
+                  
+                  {/* Render formatted text (with bolding) instead of raw text */}
+                  {formattedContent}
                   
                   {/* Interactive Cards */}
                   {ids.length > 0 && (
@@ -332,4 +339,3 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
 };
 
 export default AiAdvisor;
-    
