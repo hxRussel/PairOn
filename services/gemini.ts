@@ -1,30 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { Language } from '../types';
 
-// Helper to get the client safely supporting multiple build environments
+// Helper to get the client strictly from process.env.API_KEY as per guidelines
 const getAiClient = () => {
-  let key = '';
-
-  // 1. Try Vite Standard (import.meta.env) - This is the standard for Vercel + Vite
-  // We check this FIRST because process.env might be empty in the browser
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
-      // @ts-ignore
-      key = import.meta.env.VITE_API_KEY;
-    }
-  } catch (e) {
-    console.warn("Error accessing import.meta", e);
-  }
-
-  // 2. Fallback to process.env (Legacy/Node compatibility)
-  if (!key && typeof process !== 'undefined' && process.env) {
-    key = process.env.API_KEY || process.env.REACT_APP_API_KEY || process.env.VITE_API_KEY || '';
-  }
+  // @ts-ignore
+  const key = process.env.API_KEY;
   
   if (!key) {
-    console.error("GEMINI API KEY MISSING. Checked: import.meta.env.VITE_API_KEY and process.env.API_KEY");
-    throw new Error("API Key mancante. IMPORTANTE: Dopo aver aggiunto la chiave su Vercel, devi fare il REDEPLOY.");
+    console.error("GEMINI API KEY MISSING in process.env.API_KEY");
+    // We throw because the app cannot function without it and guidelines imply it is pre-configured.
+    throw new Error("API Key mancante. Assicurati che process.env.API_KEY sia configurato.");
   }
 
   return new GoogleGenAI({ apiKey: key });
@@ -51,7 +36,7 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
-      return lang === 'it' ? "Errore: Chiave API non valida o mancante. Fai un Redeploy su Vercel." : "Config Error: API Key missing. Please Redeploy on Vercel.";
+      return lang === 'it' ? "Errore: Chiave API non valida o mancante." : "Config Error: API Key missing.";
     }
     return lang === 'it' ? "Si è verificato un errore durante la connessione all'assistente AI." : "An error occurred while connecting to the AI assistant.";
   }

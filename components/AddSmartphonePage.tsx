@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
@@ -10,8 +10,8 @@ interface AddSmartphonePageProps {
   onClose: () => void;
   language: Language;
   isDark: boolean;
-  initialData?: PhoneData | null; // If present, we are in EDIT mode
-  isReadOnly?: boolean; // If true, disable inputs
+  initialData?: PhoneData | null;
+  isReadOnly?: boolean;
 }
 
 // --- DEFAULTS FOR SMART SELECTORS ---
@@ -33,25 +33,23 @@ const DEFAULT_STORAGE_TYPES = [
   "UFS 4.0", "UFS 3.1", "UFS 3.0", "UFS 2.2", "UFS 2.1", "NVMe", "eMMC 5.1"
 ];
 
-const DEFAULT_HAPTICS_IT = [
-  "Buona", "Aptica", "Scarsa", "Eccellente", "Motore X-Axis"
-];
-
-const DEFAULT_HAPTICS_EN = [
-  "Good", "Haptic", "Poor", "Excellent", "X-Axis Motor"
+const DEFAULT_HAPTICS = [
+  "Eccellente (X-Axis)", "Buona", "Media", "Scarsa", "Aptica", "Excellent (X-Axis)", "Good", "Average", "Poor", "Haptic"
 ];
 
 const DEFAULT_FINGERPRINT_TYPES = [
-  "Sotto display (Ottico)", 
   "Sotto display (Ultrasonico)", 
+  "Sotto display (Ottico)", 
   "Laterale (Tasto accensione)", 
   "Posteriore",
-  "Tasto Home (Frontale)"
+  "Under display (Ultrasonic)",
+  "Under display (Optical)",
+  "Side-mounted"
 ];
 
 const DEFAULT_FACEID_TYPES = [
-  "2D (Fotocamera)", 
-  "3D (Sensori dedicati)"
+  "2D (Fotocamera/Camera)", 
+  "3D (Sensori/Sensors)"
 ];
 
 const DEFAULT_DISPLAY_TYPES = [
@@ -59,12 +57,13 @@ const DEFAULT_DISPLAY_TYPES = [
 ];
 
 const DEFAULT_CAMERA_TYPES = [
-  "Principale",
-  "Grandangolare",
-  "Teleobiettivo 3x",
-  "Teleobiettivo 5x",
+  "Principale (Main)",
+  "Grandangolare (Ultra-wide)",
+  "Teleobiettivo 3x (Tele 3x)",
+  "Teleobiettivo 5x (Tele 5x)",
+  "Periscopio (Periscope)",
   "Macro",
-  "Anteriore"
+  "Anteriore (Selfie)"
 ];
 
 const DEFAULT_UI_VERSIONS = [
@@ -142,15 +141,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<string>('EUR');
   
-  // General
+  // --- STATE ---
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [imageDeleted, setImageDeleted] = useState(false); // Track if image was explicitly deleted
+  const [imageDeleted, setImageDeleted] = useState(false);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
 
-  // Hardware
   const [chip, setChip] = useState('');
   const [ipRating, setIpRating] = useState('');
   
@@ -163,50 +161,22 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [hasReverse, setHasReverse] = useState(false);
   const [reverseCharging, setReverseCharging] = useState('');
 
-  // Dynamic RAM
+  // Arrays
   const [rams, setRams] = useState<RamVariant[]>([{ amount: '', type: '' }]);
-  
-  // Dynamic Storage
   const [storages, setStorages] = useState<StorageVariant[]>([{ amount: '', unit: 'GB', type: '' }]);
-
-  // Dynamic Displays
   const [displays, setDisplays] = useState<Display[]>([{ 
-    type: '', 
-    size: '', 
-    resolution: '', 
-    refreshRate: '', 
-    brightness: '', 
-    hasHdr: false, 
-    hasDolbyVision: false 
+    type: '', size: '', resolution: '', refreshRate: '', brightness: '', hasHdr: false, hasDolbyVision: false 
   }]);
+  const [cameras, setCameras] = useState<CameraType[]>([{ type: '', megapixels: '', hasOis: false }]);
+  const [videoSettings, setVideoSettings] = useState<VideoSettings>({ maxResolution: '', maxFrameRate: '', hasHdr: false, hasDolbyVision: false });
 
-  // Dynamic Cameras
-  const [cameras, setCameras] = useState<CameraType[]>([{
-    type: '',
-    megapixels: '',
-    hasOis: false
-  }]);
-
-  // Video Settings
-  const [videoSettings, setVideoSettings] = useState<VideoSettings>({
-    maxResolution: '',
-    maxFrameRate: '',
-    hasHdr: false,
-    hasDolbyVision: false
-  });
-
-  // Features
+  // Biometrics & Haptics
   const [hasStereo, setHasStereo] = useState(false);
   const [hasJack, setHasJack] = useState(false);
-  
-  // Biometrics
-  const [hasFingerprint, setHasFingerprint] = useState(false); // Default to false
+  const [hasFingerprint, setHasFingerprint] = useState(false);
   const [fingerprintType, setFingerprintType] = useState(''); 
-
   const [hasFaceId, setHasFaceId] = useState(false);
   const [faceIdType, setFaceIdType] = useState('');
-  
-  // Haptics
   const [haptics, setHaptics] = useState('');
 
   // Software
@@ -220,7 +190,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [launchDate, setLaunchDate] = useState('');
   const [price, setPrice] = useState('');
 
-  // Pros & Cons
   const [pros, setPros] = useState<string[]>([]);
   const [cons, setCons] = useState<string[]>([]);
   const [newPro, setNewPro] = useState('');
@@ -228,14 +197,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Colors helper
+  // --- STYLES ---
   const inputBg = isReadOnly 
     ? (isDark ? 'bg-transparent border-b border-white/20 text-white' : 'bg-transparent border-b border-gray-300 text-gray-900')
-    : (isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900');
+    : (isDark ? 'bg-white/5 border-white/10 text-white focus:border-pairon-mint' : 'bg-white border-gray-200 text-gray-900 focus:border-pairon-indigo');
   
   const labelColor = isDark ? 'text-gray-400' : 'text-gray-500';
 
-  // Fetch Currency Settings
+  // --- EFFECTS ---
   useEffect(() => {
      if (auth.currentUser) {
         const unsubscribe = subscribeToUserSettings(auth.currentUser.uid, (settings) => {
@@ -245,7 +214,6 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
      }
   }, []);
 
-  // Load initial data if editing or viewing
   useEffect(() => {
     if (initialData) {
       setBrand(initialData.brand);
@@ -253,88 +221,53 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       setPreviewUrl(initialData.imageUrl || null);
       setChip(initialData.chip);
       setIpRating(initialData.ipRating);
+      
       if (initialData.ram && initialData.ram.length > 0) setRams(initialData.ram);
+      if (initialData.storage && initialData.storage.length > 0) setStorages(initialData.storage);
       
-      // Storage Load with legacy support
-      if (initialData.storage && initialData.storage.length > 0) {
-        const parsedStorage = initialData.storage.map(s => {
-           // Handle legacy data where unit might be in amount or missing
-           if (!s.unit) {
-             const match = s.amount.match(/^(\d+)\s*(GB|TB)?$/i);
-             if (match) {
-               return {
-                 ...s,
-                 amount: match[1],
-                 unit: (match[2]?.toUpperCase() as 'GB' | 'TB') || 'GB'
-               };
-             }
-             return { ...s, unit: 'GB' as 'GB' | 'TB' };
-           }
-           return s;
-        });
-        setStorages(parsedStorage);
-      }
-      
-      // Battery Load
       if (initialData.battery) {
         if (typeof initialData.battery === 'object') {
-          const cap = initialData.battery.capacity === 'Unknown' ? '' : initialData.battery.capacity;
-          setBatteryCapacity(cap);
-          setIsSiliconCarbon(initialData.battery.isSiliconCarbon);
-          setWiredCharging(initialData.battery.wiredCharging);
-          setHasWireless(initialData.battery.hasWireless);
+          setBatteryCapacity(initialData.battery.capacity || '');
+          setIsSiliconCarbon(initialData.battery.isSiliconCarbon || false);
+          setWiredCharging(initialData.battery.wiredCharging || '');
+          setHasWireless(initialData.battery.hasWireless || false);
           setWirelessCharging(initialData.battery.wirelessCharging || '');
-          setHasReverse(initialData.battery.hasReverse);
+          setHasReverse(initialData.battery.hasReverse || false);
           setReverseCharging(initialData.battery.reverseCharging || '');
-        } else if (typeof initialData.battery === 'string') {
-          const cap = initialData.battery === 'Unknown' ? '' : initialData.battery;
-          setBatteryCapacity(cap);
+        } else {
+          setBatteryCapacity(initialData.battery || '');
         }
       }
 
-      // Displays initialization
-      if (initialData.displays && initialData.displays.length > 0) {
-        setDisplays(initialData.displays);
-      }
-
-      // Cameras initialization
-      if (initialData.cameras && initialData.cameras.length > 0) {
-        setCameras(initialData.cameras);
-      }
-
-      // Video initialization
-      if (initialData.video) {
-        setVideoSettings(initialData.video);
-      }
+      if (initialData.displays && initialData.displays.length > 0) setDisplays(initialData.displays);
+      if (initialData.cameras && initialData.cameras.length > 0) setCameras(initialData.cameras);
+      if (initialData.video) setVideoSettings(initialData.video);
 
       setHasStereo(initialData.hasStereo ?? false);
       setHasJack(initialData.hasJack ?? false);
       
+      // Biometrics
       setHasFingerprint(initialData.hasFingerprint ?? false);
       setFingerprintType(initialData.fingerprintType || ''); 
-
       setHasFaceId(initialData.hasFaceId ?? false);
       setFaceIdType(initialData.faceIdType || '');
-
       setHaptics(initialData.haptics || '');
 
-      // Software
+      // OS
       setOs(initialData.os || '');
       setHasCustomUi(initialData.hasCustomUi || false);
       setCustomUi(initialData.customUi || '');
       setMajorUpdates(initialData.majorUpdates || '');
       setSecurityPatches(initialData.securityPatches || '');
 
-      // Availability
       setLaunchDate(initialData.launchDate || '');
       setPrice(initialData.price || '');
-
-      // Pros & Cons
       setPros(initialData.pros || []);
       setCons(initialData.cons || []);
     }
   }, [initialData]);
 
+  // --- HANDLERS ---
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
     const file = e.target.files?.[0];
@@ -353,18 +286,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleAddRam = () => {
-    if (isReadOnly) return;
-    setRams([...rams, { amount: '', type: '' }]);
-  };
-  
-  const handleRemoveRam = (index: number) => {
-    if (isReadOnly) return;
-    if (rams.length > 1) {
-      setRams(rams.filter((_, i) => i !== index));
-    }
-  };
-  
+  const handleAddRam = () => !isReadOnly && setRams([...rams, { amount: '', type: '' }]);
+  const handleRemoveRam = (index: number) => !isReadOnly && rams.length > 1 && setRams(rams.filter((_, i) => i !== index));
   const updateRam = (index: number, field: keyof RamVariant, value: string) => {
     if (isReadOnly) return;
     const newRams = [...rams];
@@ -372,18 +295,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setRams(newRams);
   };
 
-  const handleAddStorage = () => {
-    if (isReadOnly) return;
-    setStorages([...storages, { amount: '', unit: 'GB', type: '' }]);
-  };
-
-  const handleRemoveStorage = (index: number) => {
-    if (isReadOnly) return;
-    if (storages.length > 1) {
-      setStorages(storages.filter((_, i) => i !== index));
-    }
-  };
-
+  const handleAddStorage = () => !isReadOnly && setStorages([...storages, { amount: '', unit: 'GB', type: '' }]);
+  const handleRemoveStorage = (index: number) => !isReadOnly && storages.length > 1 && setStorages(storages.filter((_, i) => i !== index));
   const updateStorage = (index: number, field: keyof StorageVariant, value: string) => {
     if (isReadOnly) return;
     const newStorages = [...storages];
@@ -392,27 +305,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setStorages(newStorages);
   };
 
-  // --- DISPLAY HANDLERS ---
-  const handleAddDisplay = () => {
-    if (isReadOnly) return;
-    setDisplays([...displays, { 
-      type: '', 
-      size: '', 
-      resolution: '', 
-      refreshRate: '', 
-      brightness: '', 
-      hasHdr: false, 
-      hasDolbyVision: false 
-    }]);
-  };
-
-  const handleRemoveDisplay = (index: number) => {
-    if (isReadOnly) return;
-    if (displays.length > 1) {
-      setDisplays(displays.filter((_, i) => i !== index));
-    }
-  };
-
+  const handleAddDisplay = () => !isReadOnly && setDisplays([...displays, { type: '', size: '', resolution: '', refreshRate: '', brightness: '', hasHdr: false, hasDolbyVision: false }]);
+  const handleRemoveDisplay = (index: number) => !isReadOnly && displays.length > 1 && setDisplays(displays.filter((_, i) => i !== index));
   const updateDisplay = (index: number, field: keyof Display, value: any) => {
     if (isReadOnly) return;
     const newDisplays = [...displays];
@@ -421,19 +315,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setDisplays(newDisplays);
   };
 
-  // --- CAMERA HANDLERS ---
-  const handleAddCamera = () => {
-    if (isReadOnly) return;
-    setCameras([...cameras, { type: '', megapixels: '', hasOis: false }]);
-  };
-
-  const handleRemoveCamera = (index: number) => {
-    if (isReadOnly) return;
-    if (cameras.length > 1) {
-      setCameras(cameras.filter((_, i) => i !== index));
-    }
-  };
-
+  const handleAddCamera = () => !isReadOnly && setCameras([...cameras, { type: '', megapixels: '', hasOis: false }]);
+  const handleRemoveCamera = (index: number) => !isReadOnly && cameras.length > 1 && setCameras(cameras.filter((_, i) => i !== index));
   const updateCamera = (index: number, field: keyof CameraType, value: any) => {
     if (isReadOnly) return;
     const newCameras = [...cameras];
@@ -442,1158 +325,409 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setCameras(newCameras);
   };
 
-  const updateVideo = (field: keyof VideoSettings, value: any) => {
-    if (isReadOnly) return;
-    setVideoSettings({ ...videoSettings, [field]: value });
-  };
-
-  // --- PROS & CONS HANDLERS ---
-  const handleAddPro = () => {
-    if (newPro.trim()) {
-      setPros([...pros, newPro.trim()]);
-      setNewPro('');
-    }
-  };
-
-  const handleRemovePro = (index: number) => {
-    if (!isReadOnly) {
-      setPros(pros.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleAddCon = () => {
-    if (newCon.trim()) {
-      setCons([...cons, newCon.trim()]);
-      setNewCon('');
-    }
-  };
-
-  const handleRemoveCon = (index: number) => {
-    if (!isReadOnly) {
-      setCons(cons.filter((_, i) => i !== index));
-    }
-  };
-
-  const generateRandomGradient = () => {
-    const colors = [
-      'from-blue-600 to-indigo-900',
-      'from-purple-600 to-pink-900',
-      'from-emerald-600 to-teal-900',
-      'from-orange-500 to-red-900',
-      'from-slate-700 to-black',
-      'from-zinc-700 to-stone-900'
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
+  const updateVideo = (field: keyof VideoSettings, value: any) => !isReadOnly && setVideoSettings({ ...videoSettings, [field]: value });
+  const generateRandomGradient = () => 'from-blue-600 to-indigo-900';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (isReadOnly) return;
-
-    // Validate required fields only
     if (!brand.trim() || !model.trim()) {
-      setError(language === 'it' ? "Per salvare lo smartphone inserisci Casa Produttrice e Modello." : "Please enter Brand and Model to save the smartphone.");
+      setError(language === 'it' ? "Inserisci Casa Produttrice e Modello." : "Enter Brand and Model.");
       return;
     }
-
     if (!auth.currentUser) return;
 
     setIsLoading(true);
-
     let uploadedImageUrl = initialData?.imageUrl || '';
-    
-    // Logic to handle deletion or new upload
-    if (imageDeleted) {
-      uploadedImageUrl = '';
-    }
-
-    // Try upload image if exists and changed
+    if (imageDeleted) uploadedImageUrl = '';
     if (imageFile) {
       try {
         uploadedImageUrl = await uploadSmartphoneImage(auth.currentUser.uid, imageFile);
-      } catch (error) {
-        console.error("Image upload failed, saving data anyway", error);
-      }
+      } catch (error) { console.error("Image upload failed", error); }
     }
 
-    const batteryData: Battery = {
-      capacity: batteryCapacity,
-      isSiliconCarbon,
-      wiredCharging,
-      hasWireless,
-      wirelessCharging: hasWireless ? wirelessCharging : '',
-      hasReverse,
-      reverseCharging: hasReverse ? reverseCharging : ''
-    };
-
     const phoneData: Omit<PhoneData, 'id'> = {
-      brand,
-      model,
-      chip,
-      ipRating,
-      ram: rams,
-      storage: storages,
-      displays: displays,
-      cameras: cameras,
-      video: videoSettings,
-      battery: batteryData,
-      hasStereo,
-      hasJack,
-      hasFingerprint,
-      fingerprintType: hasFingerprint ? fingerprintType : '',
-      hasFaceId,
-      faceIdType: hasFaceId ? faceIdType : '',
-      haptics: haptics || (language === 'it' ? 'Non specificato' : 'Not specified'),
-      
-      // New Fields
-      os,
-      hasCustomUi,
-      customUi: hasCustomUi ? customUi : '',
-      majorUpdates,
-      securityPatches,
-      launchDate,
-      price,
-      
-      // Pros & Cons
-      pros,
-      cons,
-
-      // If creating new, random color. If editing, keep existing.
-      color: initialData?.color || generateRandomGradient(),
+      brand, model, chip, ipRating, ram: rams, storage: storages, displays, cameras, video: videoSettings,
+      battery: { 
+        capacity: batteryCapacity, 
+        isSiliconCarbon, 
+        wiredCharging, 
+        hasWireless, 
+        wirelessCharging: hasWireless ? wirelessCharging : '', 
+        hasReverse, 
+        reverseCharging: hasReverse ? reverseCharging : '' 
+      },
+      hasStereo, hasJack, 
+      hasFingerprint, fingerprintType: hasFingerprint ? fingerprintType : '', 
+      hasFaceId, faceIdType: hasFaceId ? faceIdType : '', 
+      haptics,
+      os, hasCustomUi, customUi: hasCustomUi ? customUi : '', 
+      majorUpdates, securityPatches, 
+      launchDate, price, pros, cons,
+      color: initialData?.color || generateRandomGradient(), 
       imageUrl: uploadedImageUrl,
     };
 
     try {
-      if (initialData && initialData.id) {
-        // Update existing
-        await updateSmartphone(auth.currentUser.uid, initialData.id, phoneData);
-      } else {
-        // Create new
-        await addSmartphone(auth.currentUser.uid, phoneData);
-      }
+      if (initialData && initialData.id) await updateSmartphone(auth.currentUser.uid, initialData.id, phoneData);
+      else await addSmartphone(auth.currentUser.uid, phoneData);
       onClose();
-    } catch (error) {
-      console.error("Error saving phone:", error);
-      setError(language === 'it' ? "Errore nel salvataggio." : "Error saving data.");
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error) { setError(language === 'it' ? "Errore nel salvataggio." : "Error saving data."); } 
+    finally { setIsLoading(false); }
   };
 
-  const getTitle = () => {
-    if (isReadOnly) return language === 'it' ? 'Dettagli Smartphone' : 'Smartphone Details';
-    if (initialData) return language === 'it' ? 'Modifica Smartphone' : 'Edit Smartphone';
-    return language === 'it' ? 'Aggiungi Smartphone' : 'Add Smartphone';
-  };
-
-  // Inline Error Modal
-  const ErrorPopup = () => {
-    if (!error) return null;
-    return (
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-fade-in">
-        <div className={`w-full max-w-sm p-6 rounded-2xl shadow-2xl border relative overflow-hidden ${isDark ? 'bg-pairon-surface border-red-500/30' : 'bg-white border-red-100'}`}>
-           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
-           
-           <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 animate-pulse">
-                <AlertTriangle size={24} />
-              </div>
-              <div>
-                <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>Attenzione</h3>
-                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{error}</p>
-              </div>
-              <button 
-                onClick={() => setError(null)}
-                className={`w-full py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-white text-black hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-black'}`}
-              >
-                Ho capito
-              </button>
-           </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Helper function for button styling
-  const getToggleBtnStyle = (isActive: boolean) => {
-    if (isActive) {
-      return 'bg-pairon-mint text-pairon-obsidian border-pairon-mint shadow-sm';
-    }
-    return isDark 
-      ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' 
-      : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50';
-  };
-
-  const CurrencyIcon = () => {
-     switch(currency) {
-       case 'USD': return <DollarSign size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
-       case 'GBP': return <PoundSterling size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
-       case 'JPY':
-       case 'CNY': return <JapaneseYen size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
-       case 'INR': return <IndianRupee size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
-       case 'EUR': return <Euro size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
-       default: return <Banknote size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
-     }
-  };
+  const getTitle = () => isReadOnly ? (language === 'it' ? 'Dettagli' : 'Details') : initialData ? (language === 'it' ? 'Modifica' : 'Edit') : (language === 'it' ? 'Aggiungi' : 'Add');
+  const CurrencyIcon = () => <Banknote size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />;
 
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${isDark ? 'bg-pairon-obsidian' : 'bg-pairon-ghost'} overflow-hidden animate-fade-in`}>
-      
-      <ErrorPopup />
+      {/* Error Popup */}
+      {error && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className={`w-full max-w-sm p-6 rounded-2xl shadow-2xl border relative overflow-hidden ${isDark ? 'bg-pairon-surface border-red-500/30' : 'bg-white border-red-100'}`}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
+            <div className="flex flex-col items-center text-center gap-4">
+                <AlertTriangle size={24} className="text-red-500 animate-pulse" />
+                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{error}</p>
+                <button onClick={() => setError(null)} className={`w-full py-3 rounded-xl font-bold ${isDark ? 'bg-white text-black' : 'bg-gray-900 text-white'}`}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Fullscreen Image Modal */}
+      {/* Image Fullscreen */}
       {isImageFullscreen && previewUrl && (
-        <div 
-          className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setIsImageFullscreen(false)}
-        >
-           <button 
-             onClick={() => setIsImageFullscreen(false)}
-             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-           >
-             <X size={24} />
-           </button>
-           <img 
-             src={previewUrl} 
-             alt="Fullscreen" 
-             className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-             onClick={(e) => e.stopPropagation()} 
-           />
+        <div className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setIsImageFullscreen(false)}>
+           <button onClick={() => setIsImageFullscreen(false)} className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white"><X size={24} /></button>
+           <img src={previewUrl} alt="Full" className="max-w-full max-h-[90vh] object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 
       {/* Header */}
       <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-white/10 bg-pairon-surface/80' : 'border-gray-200 bg-white/80'} backdrop-blur-md z-10`}>
         <div className="flex items-center gap-4">
-          <button onClick={onClose} className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
+          <button onClick={onClose} className={`p-2 rounded-full ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
             <ArrowLeft size={24} className={isDark ? 'text-white' : 'text-gray-800'} />
           </button>
-          <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {getTitle()}
-          </h1>
+          <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{getTitle()}</h1>
         </div>
-        
         {!isReadOnly && (
-          <button 
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="px-4 py-2 bg-pairon-mint text-pairon-obsidian font-bold rounded-xl shadow-lg hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2"
-          >
+          <button onClick={handleSubmit} disabled={isLoading} className="px-4 py-2 bg-pairon-mint text-pairon-obsidian font-bold rounded-xl shadow-lg flex items-center gap-2">
             {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Save size={18} />}
             <span className="hidden sm:inline">{language === 'it' ? 'Salva' : 'Save'}</span>
           </button>
         )}
-
-        {isReadOnly && (
-            <div className="px-4 py-2 bg-white/10 rounded-xl flex items-center gap-2 text-sm font-medium">
-                <Eye size={16} />
-                <span>{language === 'it' ? 'Sola Lettura' : 'Read Only'}</span>
-            </div>
-        )}
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto space-y-8 pb-24">
           
-          {/* SECTION 1: Identity */}
+          {/* Identity Section */}
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            
-            {/* Image Section */}
             <div className="flex gap-6 items-start">
-              <div 
-                onClick={() => {
-                  if (previewUrl) {
-                    setIsImageFullscreen(true);
-                  } else if (!isReadOnly) {
-                    fileInputRef.current?.click();
-                  }
-                }}
-                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || (!isReadOnly)) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
-              >
+              <div onClick={() => previewUrl ? setIsImageFullscreen(true) : !isReadOnly && fileInputRef.current?.click()} className={`w-32 h-48 md:w-64 md:h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 relative overflow-hidden flex-shrink-0 ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'}`}>
                 <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" disabled={isReadOnly} />
-                
-                {previewUrl ? (
-                  <>
-                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                    {/* Fullscreen Overlay Hint */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                      <Maximize2 className="text-white drop-shadow-md" size={32} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Camera className={isDark ? 'text-gray-500' : 'text-gray-400'} size={32} />
-                    <span className={`text-xs font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {isReadOnly ? (language === 'it' ? 'No Foto' : 'No Photo') : (language === 'it' ? 'Foto' : 'Photo')}
-                    </span>
-                  </>
-                )}
+                {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" /> : <Camera className={isDark ? 'text-gray-500' : 'text-gray-400'} size={32} />}
               </div>
-
-              {/* Action Buttons (Only if Not Read Only) */}
               {!isReadOnly && (
                 <div className="flex flex-col gap-3 pt-2">
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-pairon-mint text-pairon-obsidian shadow-md hover:brightness-110 transition-all font-medium"
-                  >
-                      <RefreshCw size={18} />
-                      <span>{language === 'it' ? 'Cambia' : 'Change'}</span>
-                  </button>
-                  {previewUrl && (
-                    <button 
-                      onClick={handleRemoveImage}
-                      className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all font-medium"
-                    >
-                        <Trash2 size={18} />
-                        <span>{language === 'it' ? 'Elimina' : 'Delete'}</span>
-                    </button>
-                  )}
+                  <button onClick={() => fileInputRef.current?.click()} className="p-3 rounded-xl bg-pairon-mint text-pairon-obsidian"><RefreshCw size={18} /></button>
+                  {previewUrl && <button onClick={handleRemoveImage} className="p-3 rounded-xl bg-red-500/10 text-red-500"><Trash2 size={18} /></button>}
                 </div>
               )}
             </div>
-
-            {/* Basic Info Inputs */}
-            <div className="space-y-4 flex-1 w-full">
-              
-              <SmartSelector 
-                label={language === 'it' ? 'Casa produttrice' : 'Brand'}
-                value={brand}
-                onChange={setBrand}
-                optionsCategory="brands"
-                defaultOptions={DEFAULT_BRANDS}
-                isReadOnly={isReadOnly}
-                isDark={isDark}
-                placeholder={language === 'it' ? 'es. Samsung, Apple...' : 'e.g. Samsung, Apple...'}
-                language={language}
-              />
-
+            <div className="space-y-4 flex-1 w-full min-w-0">
+              <SmartSelector label={language === 'it' ? 'Casa produttrice' : 'Brand'} value={brand} onChange={setBrand} optionsCategory="brands" defaultOptions={DEFAULT_BRANDS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                   {language === 'it' ? 'Modello' : 'Model'}
-                </label>
-                <input
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  disabled={isReadOnly}
-                  placeholder="es. Galaxy S24 Ultra"
-                  className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-2 focus:ring-pairon-mint/50'} transition-all ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                />
+                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>{language === 'it' ? 'Modello' : 'Model'}</label>
+                <input type="text" value={model} onChange={(e) => setModel(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`} placeholder={language === 'it' ? "es. Galaxy S24" : "e.g. Galaxy S24"} />
               </div>
             </div>
           </div>
 
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-          
-          {/* SECTION 2: Display */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.05s' }}>
+          {/* Display Section */}
+          <section className="space-y-6">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Monitor className="text-pairon-mint" size={20} />
-                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Display</h3>
-              </div>
-              {!isReadOnly && (
-                <button 
-                  onClick={handleAddDisplay} 
-                  className="text-xs font-bold text-pairon-mint hover:bg-pairon-mint/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                >
-                  <Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}
-                </button>
-              )}
+              <div className="flex items-center gap-2"><Monitor className="text-blue-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Display</h3></div>
+              {!isReadOnly && <button onClick={handleAddDisplay} className="text-xs font-bold text-pairon-mint flex items-center gap-1"><Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}</button>}
             </div>
-            
-            <div className="space-y-4">
-              {displays.map((display, index) => {
-                // Split resolution string into width/height for inputs
-                // Expected format: "1440 x 3120" or "1440 x 3120 pixel"
+            {displays.map((display, index) => {
                 const [width = '', height = ''] = display.resolution.toLowerCase().replace('pixel', '').split('x').map(s => s.trim());
-
                 return (
                 <div key={index} className={`p-5 rounded-2xl border relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                   {!isReadOnly && displays.length > 1 && (
-                      <button 
-                        onClick={() => handleRemoveDisplay(index)} 
-                        className="absolute top-4 right-4 text-red-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                   )}
-
-                   {displays.length > 1 && (
-                     <h4 className={`text-xs font-bold uppercase tracking-wider mb-4 ${labelColor}`}>
-                        Display {index + 1} {index === 1 ? (language === 'it' ? '(Esterno/Secondario)' : '(Cover/Secondary)') : ''}
-                     </h4>
-                   )}
-
+                   {!isReadOnly && displays.length > 1 && <button onClick={() => handleRemoveDisplay(index)} className="absolute top-4 right-4 text-red-400"><Trash2 size={16} /></button>}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <SmartSelector 
-                        label={language === 'it' ? 'Tipo Pannello' : 'Panel Type'}
-                        value={display.type}
-                        onChange={(val) => updateDisplay(index, 'type', val)}
-                        optionsCategory="displayTypes"
-                        defaultOptions={DEFAULT_DISPLAY_TYPES}
-                        isReadOnly={isReadOnly}
-                        isDark={isDark}
-                        placeholder={language === 'it' ? 'es. LTPO AMOLED' : 'e.g. LTPO AMOLED'}
-                        language={language}
-                      />
+                      <SmartSelector label={language === 'it' ? 'Tecnologia' : 'Technology'} value={display.type} onChange={(val) => updateDisplay(index, 'type', val)} optionsCategory="displayTypes" defaultOptions={DEFAULT_DISPLAY_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
                       
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}
-                        </label>
-                        <input
-                          type="text"
-                          value={display.size}
-                          onChange={(e) => updateDisplay(index, 'size', e.target.value)}
-                          disabled={isReadOnly}
-                          placeholder={language === 'it' ? 'es. 6.7' : 'e.g. 6.7'}
-                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                        />
+                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Maximize2 size={12} /> {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}</label>
+                         <input type="text" value={display.size} onChange={(e) => updateDisplay(index, 'size', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder='6.7"' />
                       </div>
-
+                      
                       <div className="col-span-1 md:col-span-2">
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Risoluzione (pixel)' : 'Resolution (pixel)'}
-                        </label>
-                        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-                           <input
-                              type="text"
-                              value={width}
-                              onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)}
-                              disabled={isReadOnly}
-                              placeholder={language === 'it' ? 'Orizzontale' : 'Horizontal'}
-                              className={`p-3 rounded-xl border outline-none text-center w-full ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
-                            />
-                            <span className={`font-bold ${isDark ? 'text-white/50' : 'text-black/50'}`}>X</span>
-                            <input
-                              type="text"
-                              value={height}
-                              onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)}
-                              disabled={isReadOnly}
-                              placeholder={language === 'it' ? 'Verticale' : 'Vertical'}
-                              className={`p-3 rounded-xl border outline-none text-center w-full ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
-                            />
+                        <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Monitor size={12} /> {language === 'it' ? 'Risoluzione (Pixel)' : 'Resolution (Pixel)'}</label>
+                        <div className="flex gap-2 items-center">
+                           <input type="text" value={width} onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none text-center ${inputBg}`} placeholder="1290" />
+                            <span className="opacity-50 font-bold">X</span>
+                           <input type="text" value={height} onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none text-center ${inputBg}`} placeholder="2796" />
                         </div>
                       </div>
-
+                      
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Refresh Rate (Hz)' : 'Refresh Rate (Hz)'}
-                        </label>
-                        <input
-                          type="text"
-                          value={display.refreshRate}
-                          onChange={(e) => updateDisplay(index, 'refreshRate', e.target.value)}
-                          disabled={isReadOnly}
-                          placeholder="120Hz"
-                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                        />
+                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><RefreshCw size={12} /> Refresh Rate (Hz)</label>
+                         <input type="text" value={display.refreshRate} onChange={(e) => updateDisplay(index, 'refreshRate', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="120 Hz" />
                       </div>
-
+                      
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Luminosità Picco' : 'Peak Brightness'}
-                        </label>
-                        <input
-                          type="text"
-                          value={display.brightness}
-                          onChange={(e) => updateDisplay(index, 'brightness', e.target.value)}
-                          disabled={isReadOnly}
-                          placeholder="2600 nits"
-                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                        />
+                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Sun size={12} className="text-yellow-500" /> {language === 'it' ? 'Luminosità (Nits)' : 'Brightness (Nits)'}</label>
+                         <input type="text" value={display.brightness} onChange={(e) => updateDisplay(index, 'brightness', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="2000 nits" />
                       </div>
-                   </div>
-
-                   {/* Features Toggles */}
-                   <div className="flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => !isReadOnly && updateDisplay(index, 'hasHdr', !display.hasHdr)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${display.hasHdr ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
-                      >
-                        HDR10+
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => !isReadOnly && updateDisplay(index, 'hasDolbyVision', !display.hasDolbyVision)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${display.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
-                      >
-                        Dolby Vision
-                      </button>
                    </div>
                 </div>
               )})}
-            </div>
           </section>
 
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 3: Hardware */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center gap-2">
-              <Cpu className="text-pairon-mint" size={20} />
-              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3>
-            </div>
+          {/* Hardware Section */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-2"><Cpu className="text-pairon-mint" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3></div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SmartSelector 
-                label={language === 'it' ? 'Processore (SoC)' : 'Processor (SoC)'}
-                value={chip}
-                onChange={setChip}
-                optionsCategory="chips"
-                defaultOptions={DEFAULT_CHIPS}
-                isReadOnly={isReadOnly}
-                isDark={isDark}
-                language={language}
-              />
-              
-              <SmartSelector 
-                label={language === 'it' ? 'Certificazione IP' : 'IP Rating'}
-                value={ipRating}
-                onChange={setIpRating}
-                optionsCategory="ipRatings"
-                defaultOptions={DEFAULT_IP_RATINGS}
-                isReadOnly={isReadOnly}
-                isDark={isDark}
-                language={language}
-              />
+              <SmartSelector label="SoC / Processor" value={chip} onChange={setChip} optionsCategory="chips" defaultOptions={DEFAULT_CHIPS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+              <SmartSelector label="IP Rating (Water/Dust)" value={ipRating} onChange={setIpRating} optionsCategory="ipRatings" defaultOptions={DEFAULT_IP_RATINGS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
             </div>
 
-            {/* RAM Section */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                 <label className={`block text-xs font-bold uppercase tracking-wider ${labelColor}`}>RAM</label>
-                 {!isReadOnly && (
-                   <button onClick={handleAddRam} className="text-xs text-pairon-mint font-bold hover:underline flex items-center gap-1">
-                     <Plus size={12} /> {language === 'it' ? 'Variante' : 'Variant'}
-                   </button>
-                 )}
-              </div>
-              {rams.map((ram, index) => (
-                <div key={index} className={`flex flex-col md:flex-row gap-3 items-stretch md:items-center rounded-xl ${isDark ? 'bg-white/5 md:bg-transparent p-3 md:p-0' : 'bg-gray-50 md:bg-transparent p-3 md:p-0 border md:border-0 border-gray-200'}`}>
-                  <div className="relative flex-1">
-                     <input
-                        type="text"
-                        value={ram.amount}
-                        onChange={(e) => updateRam(index, 'amount', e.target.value)}
-                        disabled={isReadOnly}
-                        placeholder="es. 8, 12, 16"
-                        className={`w-full p-3 rounded-xl border outline-none pl-4 ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                     />
-                     <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>GB</span>
-                  </div>
-                  
-                  <div className="flex-1">
-                     <SmartSelector 
-                        label="" 
-                        value={ram.type}
-                        onChange={(val) => updateRam(index, 'type', val)}
-                        optionsCategory="ramTypes"
-                        defaultOptions={DEFAULT_RAM_TYPES}
-                        isReadOnly={isReadOnly}
-                        isDark={isDark}
-                        placeholder={language === 'it' ? 'Tipo (LPDDR5X)' : 'Type'}
-                        language={language}
-                     />
+            {/* Biometrics & Haptics */}
+            <div className={`p-5 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+               <div className="space-y-4">
+                  {/* Fingerprint */}
+                  <div className="flex flex-col gap-2">
+                     <div className="flex items-center justify-between">
+                        <label className={`flex items-center gap-2 font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                           <Fingerprint size={18} className="text-purple-400" /> 
+                           {language === 'it' ? 'Impronta Digitale' : 'Fingerprint'}
+                        </label>
+                        {!isReadOnly && <input type="checkbox" checked={hasFingerprint} onChange={(e) => setHasFingerprint(e.target.checked)} className="w-5 h-5 accent-pairon-mint rounded cursor-pointer" />}
+                     </div>
+                     {hasFingerprint && (
+                        <div className="pl-6 animate-fade-in">
+                           <SmartSelector label={language === 'it' ? 'Tipo Sensore' : 'Sensor Type'} value={fingerprintType} onChange={setFingerprintType} optionsCategory="fingerprintTypes" defaultOptions={DEFAULT_FINGERPRINT_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                        </div>
+                     )}
                   </div>
 
-                  {!isReadOnly && rams.length > 1 && (
-                    <button onClick={() => handleRemoveRam(index)} className="p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors self-end md:self-center">
-                      <Trash2 size={18} />
-                    </button>
-                  )}
+                  {/* Face ID */}
+                  <div className="flex flex-col gap-2">
+                     <div className="flex items-center justify-between">
+                        <label className={`flex items-center gap-2 font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                           <ScanFace size={18} className="text-blue-400" /> 
+                           {language === 'it' ? 'Sblocco Facciale' : 'Face Unlock'}
+                        </label>
+                        {!isReadOnly && <input type="checkbox" checked={hasFaceId} onChange={(e) => setHasFaceId(e.target.checked)} className="w-5 h-5 accent-pairon-mint rounded cursor-pointer" />}
+                     </div>
+                     {hasFaceId && (
+                        <div className="pl-6 animate-fade-in">
+                           <SmartSelector label={language === 'it' ? 'Tecnologia' : 'Technology'} value={faceIdType} onChange={setFaceIdType} optionsCategory="faceIdTypes" defaultOptions={DEFAULT_FACEID_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Haptics */}
+                  <div className="pt-2 border-t border-white/10">
+                     <div className="flex items-center gap-2 mb-3">
+                        <Activity size={18} className="text-green-400" />
+                        <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>{language === 'it' ? 'Vibrazione' : 'Haptics'}</span>
+                     </div>
+                     <SmartSelector label={language === 'it' ? 'Qualità / Motore' : 'Quality / Motor'} value={haptics} onChange={setHaptics} optionsCategory="haptics" defaultOptions={DEFAULT_HAPTICS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                  </div>
+               </div>
+            </div>
+
+            {/* RAM */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor}`}>RAM</label>{!isReadOnly && <button onClick={handleAddRam} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
+              {rams.map((ram, index) => (
+                <div key={index} className={`flex flex-col md:flex-row gap-3 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} p-3`}>
+                  <div className="relative flex-1"><input type="text" value={ram.amount} onChange={(e) => updateRam(index, 'amount', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none pl-4 ${inputBg}`} placeholder="12" /><span className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold ${labelColor}`}>GB</span></div>
+                  <div className="flex-1"><SmartSelector label={language === 'it' ? 'Tipo' : 'Type'} value={ram.type} onChange={(val) => updateRam(index, 'type', val)} optionsCategory="ramTypes" defaultOptions={DEFAULT_RAM_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
+                  {!isReadOnly && rams.length > 1 && <button onClick={() => handleRemoveRam(index)} className="p-3 text-red-400 self-end md:self-center"><Trash2 size={18} /></button>}
                 </div>
               ))}
             </div>
 
-            {/* Storage Section */}
+            {/* Storage */}
             <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                 <label className={`block text-xs font-bold uppercase tracking-wider ${labelColor}`}>Storage</label>
-                 {!isReadOnly && (
-                   <button onClick={handleAddStorage} className="text-xs text-pairon-mint font-bold hover:underline flex items-center gap-1">
-                     <Plus size={12} /> {language === 'it' ? 'Variante' : 'Variant'}
-                   </button>
-                 )}
-              </div>
+              <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><HardDrive size={12} /> Storage</label>{!isReadOnly && <button onClick={handleAddStorage} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
               {storages.map((storage, index) => (
-                <div key={index} className={`flex flex-col md:flex-row gap-3 items-stretch md:items-center rounded-xl ${isDark ? 'bg-white/5 md:bg-transparent p-3 md:p-0' : 'bg-gray-50 md:bg-transparent p-3 md:p-0 border md:border-0 border-gray-200'}`}>
-                   <div className="flex-1 flex gap-2">
-                      <input
-                          type="text"
-                          value={storage.amount}
-                          onChange={(e) => updateStorage(index, 'amount', e.target.value)}
-                          disabled={isReadOnly}
-                          placeholder="es. 256"
-                          className={`flex-1 p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                       />
-                       <div className="w-24">
-                         <UnitSelector 
-                            value={storage.unit}
-                            onChange={(val) => updateStorage(index, 'unit', val)}
-                            isReadOnly={isReadOnly}
-                            isDark={isDark}
-                         />
-                       </div>
+                <div key={index} className={`flex flex-col md:flex-row gap-3 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} p-3`}>
+                   <div className="flex-1 flex gap-2 min-w-0">
+                      <input type="text" value={storage.amount} onChange={(e) => updateStorage(index, 'amount', e.target.value)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none ${inputBg}`} placeholder="256" />
+                      <div className="w-20 flex-shrink-0"><UnitSelector value={storage.unit} onChange={(val) => updateStorage(index, 'unit', val)} isReadOnly={isReadOnly} isDark={isDark} /></div>
                    </div>
-
-                   <div className="flex-1">
-                     <SmartSelector 
-                        label="" 
-                        value={storage.type}
-                        onChange={(val) => updateStorage(index, 'type', val)}
-                        optionsCategory="storageTypes"
-                        defaultOptions={DEFAULT_STORAGE_TYPES}
-                        isReadOnly={isReadOnly}
-                        isDark={isDark}
-                        placeholder={language === 'it' ? 'Tipo (UFS 4.0)' : 'Type'}
-                        language={language}
-                     />
-                   </div>
-
-                   {!isReadOnly && storages.length > 1 && (
-                    <button onClick={() => handleRemoveStorage(index)} className="p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors self-end md:self-center">
-                      <Trash2 size={18} />
-                    </button>
-                  )}
+                   <div className="flex-1"><SmartSelector label={language === 'it' ? 'Tipo' : 'Type'} value={storage.type} onChange={(val) => updateStorage(index, 'type', val)} optionsCategory="storageTypes" defaultOptions={DEFAULT_STORAGE_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
+                   {!isReadOnly && storages.length > 1 && <button onClick={() => handleRemoveStorage(index)} className="p-3 text-red-400 self-end md:self-center"><Trash2 size={18} /></button>}
                 </div>
               ))}
             </div>
           </section>
 
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 4: Camera & Video */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.15s' }}>
+          {/* Cameras Section */}
+          <section className="space-y-6">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Aperture className="text-pairon-mint" size={20} />
-                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Fotocamere</h3>
-              </div>
-              {!isReadOnly && (
-                <button 
-                  onClick={handleAddCamera} 
-                  className="text-xs font-bold text-pairon-mint hover:bg-pairon-mint/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                >
-                  <Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}
-                </button>
-              )}
+              <div className="flex items-center gap-2"><Aperture className="text-red-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Cameras</h3></div>
+              {!isReadOnly && <button onClick={handleAddCamera} className="text-xs font-bold text-pairon-mint flex items-center gap-1"><Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}</button>}
             </div>
-
             <div className="space-y-4">
                {cameras.map((cam, index) => (
                  <div key={index} className={`p-4 rounded-2xl border flex flex-col md:flex-row gap-4 items-stretch md:items-center relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                    {!isReadOnly && cameras.length > 1 && (
-                      <button onClick={() => handleRemoveCamera(index)} className="absolute top-2 right-2 text-red-400 hover:bg-red-500/10 p-2 rounded-full z-10">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-
-                    <div className="flex-1 w-full md:w-auto">
-                       <SmartSelector 
-                          label={language === 'it' ? 'Tipo Lente' : 'Lens Type'}
-                          value={cam.type}
-                          onChange={(val) => updateCamera(index, 'type', val)}
-                          optionsCategory="cameraTypes"
-                          defaultOptions={DEFAULT_CAMERA_TYPES}
-                          isReadOnly={isReadOnly}
-                          isDark={isDark}
-                          language={language}
-                       />
-                    </div>
-                    
-                    <div className="w-full md:w-32">
-                      <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>MP</label>
-                      <input
-                          type="text"
-                          value={cam.megapixels}
-                          onChange={(e) => updateCamera(index, 'megapixels', e.target.value)}
-                          disabled={isReadOnly}
-                          placeholder="es. 50"
-                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                       />
-                    </div>
-
-                    <div className="flex items-end pb-0 md:pb-2">
-                       <button
-                        type="button"
-                        onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)}
-                        className={`w-full md:w-auto px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
-                      >
-                        OIS
-                      </button>
-                    </div>
+                    {!isReadOnly && cameras.length > 1 && <button onClick={() => handleRemoveCamera(index)} className="absolute top-2 right-2 text-red-400"><Trash2 size={16} /></button>}
+                    <div className="flex-1"><SmartSelector label={language === 'it' ? 'Obiettivo' : 'Lens'} value={cam.type} onChange={(val) => updateCamera(index, 'type', val)} optionsCategory="cameraTypes" defaultOptions={DEFAULT_CAMERA_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
+                    <div className="w-full md:w-24"><label className={`block text-xs font-bold uppercase ${labelColor}`}>MP</label><input type="text" value={cam.megapixels} onChange={(e) => updateCamera(index, 'megapixels', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="50" /></div>
+                    <div className="flex items-end"><button type="button" onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)} className={`w-full md:w-auto px-4 py-2.5 rounded-xl text-sm font-bold border ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-500')}`}>OIS</button></div>
                  </div>
                ))}
             </div>
-
+            
+            {/* Video */}
             <div className={`p-5 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-               <h4 className={`text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${labelColor}`}>
-                 <Video size={14} /> {language === 'it' ? 'Registrazione Video' : 'Video Recording'}
-               </h4>
+               <h4 className={`text-xs font-bold uppercase mb-4 flex items-center gap-2 ${labelColor}`}><Video size={14} /> Video</h4>
                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                      {language === 'it' ? 'Risoluzione Max' : 'Max Resolution'}
-                    </label>
-                    <input
-                      type="text"
-                      value={videoSettings.maxResolution}
-                      onChange={(e) => updateVideo('maxResolution', e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="es. 8K"
-                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                    />
+                     <label className={`block text-xs font-bold uppercase ${labelColor}`}>{language === 'it' ? 'Risoluzione Max' : 'Max Resolution'}</label>
+                     <input type="text" value={videoSettings.maxResolution} onChange={(e) => updateVideo('maxResolution', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="8K" />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                      Max FPS
-                    </label>
-                    <input
-                      type="text"
-                      value={videoSettings.maxFrameRate}
-                      onChange={(e) => updateVideo('maxFrameRate', e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="es. 60fps"
-                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                    />
+                     <label className={`block text-xs font-bold uppercase ${labelColor}`}>{language === 'it' ? 'FPS Max' : 'Max FPS'}</label>
+                     <input type="text" value={videoSettings.maxFrameRate} onChange={(e) => updateVideo('maxFrameRate', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="60 fps" />
                   </div>
                </div>
                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => !isReadOnly && updateVideo('hasHdr', !videoSettings.hasHdr)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${videoSettings.hasHdr ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
-                  >
-                    HDR Video
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => !isReadOnly && updateVideo('hasDolbyVision', !videoSettings.hasDolbyVision)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${videoSettings.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian border-pairon-mint' : (isDark ? 'bg-transparent border-white/10 text-gray-400' : 'bg-transparent border-gray-300 text-gray-500')}`}
-                  >
-                    Dolby Vision
-                  </button>
+                  <button type="button" onClick={() => !isReadOnly && updateVideo('hasHdr', !videoSettings.hasHdr)} className={`px-4 py-2 rounded-lg text-sm font-bold border ${videoSettings.hasHdr ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-500')}`}>HDR</button>
+                  <button type="button" onClick={() => !isReadOnly && updateVideo('hasDolbyVision', !videoSettings.hasDolbyVision)} className={`px-4 py-2 rounded-lg text-sm font-bold border ${videoSettings.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-500')}`}>Dolby</button>
                </div>
             </div>
           </section>
 
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 5: Battery */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <div className="flex items-center gap-2">
-              <BatteryMedium className="text-pairon-mint" size={20} />
-              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Batteria & Ricarica</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div>
-                 <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                   {language === 'it' ? 'Capacità (mAh)' : 'Capacity (mAh)'}
-                 </label>
-                 <input
-                    type="text"
-                    value={batteryCapacity}
-                    onChange={(e) => setBatteryCapacity(e.target.value)}
-                    disabled={isReadOnly}
-                    placeholder="es. 5000"
-                    className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                 />
-                 <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => !isReadOnly && setIsSiliconCarbon(!isSiliconCarbon)}
-                      className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${isSiliconCarbon ? 'bg-pairon-mint/20 border-pairon-mint text-pairon-mint' : (isDark ? 'border-white/10 text-gray-500' : 'border-gray-200 text-gray-500')}`}
-                    >
-                       Silicon-Carbon Tech
-                    </button>
-                 </div>
-               </div>
-
-               <div>
-                 <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                   {language === 'it' ? 'Ricarica Cablata' : 'Wired Charging'}
-                 </label>
-                 <div className="relative">
-                   <Zap size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`} />
-                   <input
-                      type="text"
-                      value={wiredCharging}
-                      onChange={(e) => setWiredCharging(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="es. 80W"
-                      className={`w-full p-3 pl-10 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                   />
-                 </div>
-               </div>
-            </div>
-
-            <div className={`p-4 rounded-2xl border space-y-4 ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-               <div className="flex items-center justify-between">
-                  <span className={`font-bold text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Wireless Charging</span>
-                  <button 
-                    type="button"
-                    onClick={() => !isReadOnly && setHasWireless(!hasWireless)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasWireless ? 'bg-pairon-mint' : 'bg-gray-600'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasWireless ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-               </div>
-               {hasWireless && (
-                 <div className="animate-fade-in">
-                    <input
-                      type="text"
-                      value={wirelessCharging}
-                      onChange={(e) => setWirelessCharging(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder={language === 'it' ? "Velocità (es. 50W)" : "Speed (e.g. 50W)"}
-                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                   />
-                 </div>
-               )}
-
-               <div className="border-t border-gray-500/20 pt-4 flex items-center justify-between">
-                  <span className={`font-bold text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Reverse Charging</span>
-                  <button 
-                    type="button"
-                    onClick={() => !isReadOnly && setHasReverse(!hasReverse)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasReverse ? 'bg-pairon-mint' : 'bg-gray-600'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasReverse ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-               </div>
-               {hasReverse && (
-                 <div className="animate-fade-in">
-                    <input
-                      type="text"
-                      value={reverseCharging}
-                      onChange={(e) => setReverseCharging(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder={language === 'it' ? "Velocità (es. 10W)" : "Speed (e.g. 10W)"}
-                      className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                   />
-                 </div>
-               )}
-            </div>
-          </section>
-          
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 6: Features & Biometrics */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.25s' }}>
-            <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Features & {language === 'it' ? 'Biometria' : 'Biometrics'}</h3>
-            
-            <div className="flex flex-wrap gap-3">
-               <button
-                  type="button"
-                  onClick={() => !isReadOnly && setHasStereo(!hasStereo)}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition-all border ${hasStereo ? getToggleBtnStyle(true) : getToggleBtnStyle(false)}`}
-               >
-                  <Volume2 size={18} /> Stereo Speakers
-               </button>
-               <button
-                  type="button"
-                  onClick={() => !isReadOnly && setHasJack(!hasJack)}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition-all border ${hasJack ? getToggleBtnStyle(true) : getToggleBtnStyle(false)}`}
-               >
-                  <RefreshCcw size={18} className="rotate-90" /> 3.5mm Jack
-               </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {/* Fingerprint */}
-               <div className={`p-4 rounded-2xl border space-y-3 ${hasFingerprint ? (isDark ? 'border-pairon-mint/30 bg-pairon-mint/5' : 'border-pairon-mint/30 bg-pairon-mint/5') : (isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
-                  <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                        <Fingerprint size={20} className={hasFingerprint ? 'text-pairon-mint' : 'text-gray-400'} />
-                        <span className={`font-bold ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Fingerprint</span>
-                     </div>
-                     <button 
-                        type="button"
-                        onClick={() => !isReadOnly && setHasFingerprint(!hasFingerprint)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasFingerprint ? 'bg-pairon-mint' : 'bg-gray-600'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasFingerprint ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                  </div>
-                  {hasFingerprint && (
-                     <SmartSelector 
-                        label=""
-                        value={fingerprintType}
-                        onChange={setFingerprintType}
-                        optionsCategory="fingerprintTypes"
-                        defaultOptions={DEFAULT_FINGERPRINT_TYPES}
-                        isReadOnly={isReadOnly}
-                        isDark={isDark}
-                        placeholder={language === 'it' ? 'Tipo (es. Ultrasonico)' : 'Type'}
-                        language={language}
-                     />
-                  )}
-               </div>
-
-               {/* Face ID */}
-               <div className={`p-4 rounded-2xl border space-y-3 ${hasFaceId ? (isDark ? 'border-pairon-mint/30 bg-pairon-mint/5' : 'border-pairon-mint/30 bg-pairon-mint/5') : (isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
-                  <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                        <ScanFace size={20} className={hasFaceId ? 'text-pairon-mint' : 'text-gray-400'} />
-                        <span className={`font-bold ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Face Unlock</span>
-                     </div>
-                     <button 
-                        type="button"
-                        onClick={() => !isReadOnly && setHasFaceId(!hasFaceId)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasFaceId ? 'bg-pairon-mint' : 'bg-gray-600'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasFaceId ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                  </div>
-                  {hasFaceId && (
-                     <SmartSelector 
-                        label=""
-                        value={faceIdType}
-                        onChange={setFaceIdType}
-                        optionsCategory="faceIdTypes"
-                        defaultOptions={DEFAULT_FACEID_TYPES}
-                        isReadOnly={isReadOnly}
-                        isDark={isDark}
-                        placeholder={language === 'it' ? 'Tipo (es. 3D)' : 'Type'}
-                        language={language}
-                     />
-                  )}
-               </div>
-            </div>
-
-            <div className="space-y-2">
-               <div className="flex items-center gap-2 mb-2">
-                  <Activity size={18} className="text-pairon-mint" />
-                  <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                     {language === 'it' ? 'Feedback Aptico (Vibrazione)' : 'Haptics'}
-                  </span>
-               </div>
-               <SmartSelector 
-                  label=""
-                  value={haptics}
-                  onChange={setHaptics}
-                  optionsCategory="haptics"
-                  defaultOptions={language === 'it' ? DEFAULT_HAPTICS_IT : DEFAULT_HAPTICS_EN}
-                  isReadOnly={isReadOnly}
-                  isDark={isDark}
-                  language={language}
-               />
-            </div>
-          </section>
-
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 7: Software */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-             <div className="flex items-center gap-2">
-               <AppWindow className="text-pairon-mint" size={20} />
-               <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software</h3>
+          {/* Battery Section */}
+          <section className="space-y-6">
+             <div className="flex items-center gap-2"><BatteryMedium className="text-green-500" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Batteria' : 'Battery'}</h3></div>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                   <label className={`block text-xs font-bold uppercase ${labelColor}`}>{language === 'it' ? 'Capacità (mAh)' : 'Capacity (mAh)'}</label>
+                   <input type="text" value={batteryCapacity} onChange={(e) => setBatteryCapacity(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="5000" />
+                   
+                   {/* Silicon Carbon Toggle */}
+                   <div className="flex items-center gap-2 mt-2">
+                      <input type="checkbox" checked={isSiliconCarbon} onChange={(e) => setIsSiliconCarbon(e.target.checked)} disabled={isReadOnly} className="w-4 h-4 accent-pairon-mint" />
+                      <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{language === 'it' ? 'Tecnologia Silicio-Carbonio' : 'Silicon-Carbon Technology'}</span>
+                   </div>
+                </div>
+                
+                <div>
+                   <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Zap size={12} className="text-yellow-400" /> {language === 'it' ? 'Ricarica Cablata (W)' : 'Wired Charging (W)'}</label>
+                   <input type="text" value={wiredCharging} onChange={(e) => setWiredCharging(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="80W" />
+                </div>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <SmartSelector 
-                  label="OS Version"
-                  value={os}
-                  onChange={setOs}
-                  optionsCategory="osVersions"
-                  defaultOptions={DEFAULT_OS_VERSIONS}
-                  isReadOnly={isReadOnly}
-                  isDark={isDark}
-                  placeholder="es. Android 14"
-                  language={language}
-                />
-
-                <div className={`p-4 rounded-2xl border space-y-3 ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                   <div className="flex justify-between items-center">
-                      <span className={`font-bold text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                         {language === 'it' ? 'Interfaccia Custom' : 'Custom UI'}
+             {/* Wireless & Reverse */}
+             <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                {/* Wireless */}
+                <div className="flex flex-col gap-3 mb-4 pb-4 border-b border-white/10">
+                   <div className="flex items-center justify-between">
+                      <span className={`font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                         <SmartphoneNfc size={18} className="text-blue-400" />
+                         {language === 'it' ? 'Ricarica Wireless' : 'Wireless Charging'}
                       </span>
-                      <button 
-                        type="button"
-                        onClick={() => !isReadOnly && setHasCustomUi(!hasCustomUi)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasCustomUi ? 'bg-pairon-mint' : 'bg-gray-600'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasCustomUi ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
+                      {!isReadOnly && <input type="checkbox" checked={hasWireless} onChange={(e) => setHasWireless(e.target.checked)} className="w-5 h-5 accent-pairon-mint rounded cursor-pointer" />}
                    </div>
-                   {hasCustomUi && (
-                      <SmartSelector 
-                        label=""
-                        value={customUi}
-                        onChange={setCustomUi}
-                        optionsCategory="uiVersions"
-                        defaultOptions={DEFAULT_UI_VERSIONS}
-                        isReadOnly={isReadOnly}
-                        isDark={isDark}
-                        placeholder="es. One UI 6.1"
-                        language={language}
-                      />
+                   {hasWireless && (
+                      <div className="pl-7 animate-fade-in">
+                         <label className={`block text-xs font-bold uppercase ${labelColor} mb-1`}>{language === 'it' ? 'Velocità (W)' : 'Speed (W)'}</label>
+                         <input type="text" value={wirelessCharging} onChange={(e) => setWirelessCharging(e.target.value)} disabled={isReadOnly} className={`w-full p-2 rounded-lg border outline-none ${inputBg}`} placeholder="50W" />
+                      </div>
+                   )}
+                </div>
+
+                {/* Reverse */}
+                <div className="flex flex-col gap-3">
+                   <div className="flex items-center justify-between">
+                      <span className={`font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                         <RefreshCcw size={18} className="text-orange-400" />
+                         {language === 'it' ? 'Ricarica Inversa' : 'Reverse Charging'}
+                      </span>
+                      {!isReadOnly && <input type="checkbox" checked={hasReverse} onChange={(e) => setHasReverse(e.target.checked)} className="w-5 h-5 accent-pairon-mint rounded cursor-pointer" />}
+                   </div>
+                   {hasReverse && (
+                      <div className="pl-7 animate-fade-in">
+                         <label className={`block text-xs font-bold uppercase ${labelColor} mb-1`}>{language === 'it' ? 'Velocità (W)' : 'Speed (W)'}</label>
+                         <input type="text" value={reverseCharging} onChange={(e) => setReverseCharging(e.target.value)} disabled={isReadOnly} className={`w-full p-2 rounded-lg border outline-none ${inputBg}`} placeholder="10W" />
+                      </div>
                    )}
                 </div>
              </div>
+          </section>
+          
+          {/* Software Section */}
+          <section className="space-y-6">
+             <div className="flex items-center gap-2"><AppWindow className="text-indigo-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software & OS</h3></div>
+             
+             <SmartSelector label="OS Version" value={os} onChange={setOs} optionsCategory="osVersions" defaultOptions={DEFAULT_OS_VERSIONS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+             
+             {/* Custom UI */}
+             <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex items-center justify-between mb-3">
+                   <label className={`flex items-center gap-2 font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                      <Palette size={18} className="text-pink-400" /> 
+                      {language === 'it' ? 'Interfaccia Personalizzata' : 'Custom UI'}
+                   </label>
+                   {!isReadOnly && <input type="checkbox" checked={hasCustomUi} onChange={(e) => setHasCustomUi(e.target.checked)} className="w-5 h-5 accent-pairon-mint rounded cursor-pointer" />}
+                </div>
+                {hasCustomUi && (
+                   <div className="animate-fade-in">
+                      <SmartSelector label={language === 'it' ? 'Nome UI' : 'UI Name'} value={customUi} onChange={setCustomUi} optionsCategory="uiVersions" defaultOptions={DEFAULT_UI_VERSIONS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                   </div>
+                )}
+             </div>
 
-             <div className="grid grid-cols-2 gap-4">
+             {/* Support */}
+             <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                    Major Updates
-                  </label>
-                  <div className="relative">
-                    <Layers size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                    <input
-                        type="text"
-                        value={majorUpdates}
-                        onChange={(e) => setMajorUpdates(e.target.value)}
-                        disabled={isReadOnly}
-                        placeholder={language === 'it' ? "Anni (es. 4)" : "Years (e.g. 4)"}
-                        className={`w-full p-3 pl-10 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                    />
-                  </div>
+                   <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Calendar size={12} /> {language === 'it' ? 'Major Updates (Anni)' : 'Major Updates (Years)'}</label>
+                   <input type="number" value={majorUpdates} onChange={(e) => setMajorUpdates(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="4" />
                 </div>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                    Security Patches
-                  </label>
-                  <div className="relative">
-                    <Layers size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                    <input
-                        type="text"
-                        value={securityPatches}
-                        onChange={(e) => setSecurityPatches(e.target.value)}
-                        disabled={isReadOnly}
-                        placeholder={language === 'it' ? "Anni (es. 5)" : "Years (e.g. 5)"}
-                        className={`w-full p-3 pl-10 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                    />
-                  </div>
+                   <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><ShieldCheck size={12} /> {language === 'it' ? 'Patch Sicurezza (Anni)' : 'Security Patches (Years)'}</label>
+                   <input type="number" value={securityPatches} onChange={(e) => setSecurityPatches(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="5" />
                 </div>
              </div>
           </section>
 
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 8: Availability */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.35s' }}>
-             <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-               {language === 'it' ? 'Lancio & Prezzo' : 'Launch & Price'}
-             </h3>
+          {/* Availability & Price */}
+          <section className="space-y-6">
+             <div className="flex items-center gap-2"><CalendarDays className="text-yellow-500" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Disponibilità & Prezzo' : 'Availability & Price'}</h3></div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                    {language === 'it' ? 'Data di Uscita' : 'Release Date'}
-                  </label>
-                  <div className="relative">
-                    <Calendar size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-                    <input
-                        type="date"
-                        value={launchDate}
-                        onChange={(e) => setLaunchDate(e.target.value)}
-                        disabled={isReadOnly}
-                        className={`w-full p-3 pl-10 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                    />
-                  </div>
+                   <label className={`block text-xs font-bold uppercase ${labelColor} mb-1`}>{language === 'it' ? 'Data di Lancio' : 'Launch Date'}</label>
+                   <div className={`relative flex items-center w-full rounded-xl border ${inputBg}`}>
+                      <Calendar size={18} className={`ml-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                      <input 
+                        type="date" 
+                        value={launchDate} 
+                        onChange={(e) => setLaunchDate(e.target.value)} 
+                        disabled={isReadOnly} 
+                        className="w-full bg-transparent p-3 outline-none" 
+                      />
+                   </div>
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                    {language === 'it' ? 'Prezzo Listino' : 'Launch Price'}
-                  </label>
-                  <div className="relative">
-                    <CurrencyIcon />
-                    <input
-                        type="text"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        disabled={isReadOnly}
-                        placeholder="es. 999"
-                        className={`w-full p-3 pl-10 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                    />
-                  </div>
-                </div>
-             </div>
-          </section>
-
-          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
-
-          {/* SECTION 9: Pros & Cons */}
-          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-             <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-               Pros & Cons (Opzionale)
-             </h3>
-
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Pros */}
-                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-green-500/5 border-green-500/20' : 'bg-green-50 border-green-200'}`}>
-                   <h4 className="font-bold text-green-500 mb-3 flex items-center gap-2">
-                     <ThumbsUp size={18} /> PROS
-                   </h4>
-                   <ul className="space-y-2 mb-3">
-                      {pros.map((p, idx) => (
-                        <li key={idx} className="flex justify-between items-start text-sm">
-                           <span className={`flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>• {p}</span>
-                           {!isReadOnly && (
-                             <button onClick={() => handleRemovePro(idx)} className="text-red-400 hover:text-red-500 ml-2">
-                               <X size={14} />
-                             </button>
-                           )}
-                        </li>
-                      ))}
-                   </ul>
-                   {!isReadOnly && (
-                     <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          value={newPro}
-                          onChange={(e) => setNewPro(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddPro()}
-                          placeholder={language === 'it' ? "Aggiungi pro..." : "Add pro..."}
-                          className={`flex-1 text-sm bg-transparent border-b border-green-500/30 outline-none py-1 ${isDark ? 'text-white placeholder-gray-600' : 'text-black placeholder-gray-400'}`}
-                        />
-                        <button onClick={handleAddPro} className="text-green-500 hover:text-green-400">
-                           <Plus size={18} />
-                        </button>
-                     </div>
-                   )}
-                </div>
-
-                {/* Cons */}
-                <div className={`p-5 rounded-2xl border ${isDark ? 'bg-red-500/5 border-red-500/20' : 'bg-red-50 border-red-200'}`}>
-                   <h4 className="font-bold text-red-500 mb-3 flex items-center gap-2">
-                     <ThumbsDown size={18} /> CONS
-                   </h4>
-                   <ul className="space-y-2 mb-3">
-                      {cons.map((c, idx) => (
-                        <li key={idx} className="flex justify-between items-start text-sm">
-                           <span className={`flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>• {c}</span>
-                           {!isReadOnly && (
-                             <button onClick={() => handleRemoveCon(idx)} className="text-red-400 hover:text-red-500 ml-2">
-                               <X size={14} />
-                             </button>
-                           )}
-                        </li>
-                      ))}
-                   </ul>
-                   {!isReadOnly && (
-                     <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          value={newCon}
-                          onChange={(e) => setNewCon(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddCon()}
-                          placeholder={language === 'it' ? "Aggiungi contro..." : "Add con..."}
-                          className={`flex-1 text-sm bg-transparent border-b border-red-500/30 outline-none py-1 ${isDark ? 'text-white placeholder-gray-600' : 'text-black placeholder-gray-400'}`}
-                        />
-                        <button onClick={handleAddCon} className="text-red-500 hover:text-red-400">
-                           <Plus size={18} />
-                        </button>
-                     </div>
-                   )}
+                   <label className={`block text-xs font-bold uppercase ${labelColor} mb-1`}>{language === 'it' ? 'Prezzo' : 'Price'}</label>
+                   <div className="relative">
+                      <CurrencyIcon />
+                      <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} disabled={isReadOnly} className={`w-full p-3 pl-10 rounded-xl border outline-none ${inputBg}`} placeholder="999" />
+                   </div>
                 </div>
              </div>
           </section>

@@ -7,11 +7,13 @@ import { Loader } from './components/Loader';
 import { AuthState, Language, Theme } from './types';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { WifiOff } from 'lucide-react';
 
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>(AuthState.LOGIN);
   const [language, setLanguage] = useState<Language>('en');
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   
   // Theme State
   const [themeSetting, setThemeSetting] = useState<Theme>('auto');
@@ -25,23 +27,32 @@ const App: React.FC = () => {
     } else {
       setLanguage('en');
     }
+
+    // Network listeners
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // Handle Authentication State Persistence
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // User is signed in, skip login page
         setAuthState(AuthState.DASHBOARD);
       } else {
-        // User is signed out
         setAuthState(AuthState.LOGIN);
       }
-      // Small delay to ensure smooth transition/loading
-      setTimeout(() => setIsAuthChecking(false), 500);
+      // Remove loading state once Firebase has responded (initially or after restore)
+      setIsAuthChecking(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
@@ -86,6 +97,15 @@ const App: React.FC = () => {
 
   return (
     <main className={`w-full h-full transition-colors duration-300 ${effectiveTheme === 'light' ? 'bg-pairon-ghost text-pairon-obsidian' : 'bg-pairon-obsidian text-pairon-ghost'}`}>
+      
+      {/* Offline Banner */}
+      {isOffline && (
+        <div className="fixed top-0 left-0 w-full z-[100] bg-red-500 text-white text-xs font-bold py-1 px-4 text-center flex items-center justify-center gap-2 shadow-lg">
+          <WifiOff size={12} />
+          <span>Sei offline. Alcune funzioni potrebbero non andare.</span>
+        </div>
+      )}
+
       {authState === AuthState.LOGIN && (
         <LoginPage 
           setAuthState={setAuthState} 
