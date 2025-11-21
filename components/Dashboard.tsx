@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap, HardDrive, Aperture } from 'lucide-react';
 import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
@@ -1041,7 +1041,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             {/* Add New Card */}
             <div 
               onClick={handleAddPhoneClick}
-              className={`snap-start shrink-0 w-64 h-96 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}
+              className={`snap-start shrink-0 w-72 h-[26rem] rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group ${isDark ? 'bg-pairon-surface border-white/10 text-gray-500 hover:border-pairon-indigo hover:text-pairon-indigo' : 'bg-white border-gray-300 text-gray-400 hover:border-pairon-indigo hover:text-pairon-indigo'}`}
             >
               <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-white/5 group-hover:bg-pairon-indigo/20' : 'bg-gray-100 group-hover:bg-pairon-indigo/10'}`}>
                 <Plus className="w-8 h-8" />
@@ -1051,17 +1051,35 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Loading State */}
             {loadingPhones && (
-              <div className="snap-start shrink-0 w-72 h-96 flex items-center justify-center">
+              <div className="snap-start shrink-0 w-72 h-[26rem] flex items-center justify-center">
                 <Loader className={`animate-spin w-8 h-8 ${subTextColor}`} />
               </div>
             )}
 
             {/* Smartphone Cards */}
-            {savedPhones.map((phone) => (
+            {savedPhones.map((phone) => {
+              // Helper calculations for the preview card
+              // Filter out cameras with empty megapixel string before sorting to avoid "undefined" issues
+              const maxCam = phone.cameras?.filter(c => c.megapixels && c.megapixels.trim() !== '').sort((a, b) => parseInt(b.megapixels || '0') - parseInt(a.megapixels || '0'))[0];
+              
+              // Determine Largest Storage (Filtering empty amounts first)
+              const storageInfo = phone.storage?.filter(s => s.amount && s.amount.trim() !== '').sort((a, b) => {
+                  const getVal = (s: any) => {
+                     const num = parseFloat(s.amount || '0');
+                     // Convert TB to GB for comparison
+                     const mult = s.unit === 'TB' ? 1024 : 1;
+                     return num * mult;
+                  };
+                  return getVal(b) - getVal(a);
+              })[0];
+
+              const currencySymbol = userSettings.currency === 'USD' ? '$' : userSettings.currency === 'GBP' ? '£' : userSettings.currency === 'JPY' ? '¥' : '€';
+
+              return (
               <div 
                 key={phone.id} 
                 onClick={() => setViewingPhone(phone)} // Default click opens view mode
-                className="snap-start shrink-0 w-72 h-96 relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer"
+                className="snap-start shrink-0 w-72 h-[26rem] relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer shadow-xl"
               >
                 {/* Background Gradient */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${phone.color} opacity-90`}>
@@ -1070,33 +1088,29 @@ const Dashboard: React.FC<DashboardProps> = ({
                   )}
                 </div>
                 
-                {/* Content */}
-                <div className="absolute inset-0 p-6 flex flex-col justify-between text-white">
-                  <div className="flex justify-between items-start">
+                {/* Content Container */}
+                <div className="absolute inset-0 p-5 flex flex-col justify-between text-white">
+                  
+                  {/* Top Section: Brand & Actions */}
+                  <div className="flex justify-between items-start z-10">
                     <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10">
                       {phone.brand}
                     </span>
                     
-                    {/* ACTION BUTTONS - Always Visible on Touch, Hover effect on Desktop */}
+                    {/* ACTION BUTTONS */}
                     <div className="flex gap-1 bg-black/30 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-lg" onClick={(e) => e.stopPropagation()}>
-                      
-                      {/* View Button */}
                       <button 
                         onClick={() => setViewingPhone(phone)}
                         className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
                       >
                          <Eye size={14} />
                       </button>
-
-                      {/* Edit Button */}
                       <button 
                         onClick={() => setEditingPhone(phone)}
                         className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
                       >
                          <Edit2 size={14} />
                       </button>
-
-                      {/* Delete Button */}
                       <button 
                         onClick={(e) => handleDeleteClick(e, phone)}
                         className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white"
@@ -1106,28 +1120,62 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-1 mb-8 relative z-10">
-                    <h3 className="text-2xl font-bold font-display leading-tight">{phone.model}</h3>
-                    <div className="w-12 h-1 bg-pairon-mint rounded-full"></div>
+                  {/* Name - Positioned Higher */}
+                  <div className="mt-2">
+                    <h3 className="text-2xl font-bold font-display leading-tight drop-shadow-md">{phone.model}</h3>
+                    <div className="w-12 h-1 bg-pairon-mint rounded-full mt-1"></div>
                   </div>
 
-                  {/* Specs Grid */}
-                  <div className="grid grid-cols-2 gap-3 bg-black/20 backdrop-blur-xl p-4 rounded-2xl border border-white/5">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-white/60 text-xs">
-                        <Cpu size={12} />
-                        <span>Chip</span>
-                      </div>
-                      <span className="font-semibold text-sm truncate">{phone.chip || '-'}</span>
+                  {/* NEW STATS CARD - Bottom Anchor */}
+                  <div className="mt-auto bg-black/40 backdrop-blur-xl p-3.5 rounded-2xl border border-white/10 shadow-xl z-10">
+                    {/* Row 1: Price (Hero) */}
+                    <div className="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
+                        <span className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                          {language === 'it' ? 'Prezzo' : 'Price'}
+                        </span>
+                        <span className="text-xl font-bold text-pairon-mint font-mono">
+                          {phone.price ? `${currencySymbol} ${phone.price}` : '-'}
+                        </span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-white/60 text-xs">
-                        <Battery size={12} />
-                        <span>RAM</span>
-                      </div>
-                      <span className="font-semibold text-sm truncate">
-                         {phone.ram && phone.ram.length > 0 ? `${phone.ram[0].amount}GB` : '-'}
-                      </span>
+
+                    {/* Row 2: Specs Grid */}
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+                        {/* Chip */}
+                        <div className="col-span-2 flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-white/10">
+                              <Cpu size={14} className="text-white/80" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                              <span className="text-[10px] text-white/50 uppercase">Chip</span>
+                              <span className="text-xs font-medium truncate">{phone.chip || '-'}</span>
+                          </div>
+                        </div>
+
+                        {/* ROM */}
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-white/10">
+                              <HardDrive size={14} className="text-white/80" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                              <span className="text-[10px] text-white/50 uppercase">Rom</span>
+                              <span className="text-xs font-medium truncate">
+                                {storageInfo ? `${storageInfo.amount}${storageInfo.unit}` : '-'}
+                              </span>
+                          </div>
+                        </div>
+
+                        {/* Camera */}
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-white/10">
+                              <Aperture size={14} className="text-white/80" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                              <span className="text-[10px] text-white/50 uppercase">Cam</span>
+                              <span className="text-xs font-medium truncate">
+                                {maxCam ? `${maxCam.megapixels}MP` : '-'}
+                              </span>
+                          </div>
+                        </div>
                     </div>
                   </div>
                 </div>
@@ -1135,7 +1183,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {/* Glossy Overlay Effect */}
                 <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       );
