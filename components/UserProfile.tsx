@@ -67,6 +67,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
         aiAssistant: "Assistente AI"
       },
       uploadError: "Impossibile caricare l'immagine.",
+      uploadGenericError: "Errore caricamento.",
     },
     en: {
       title: "User Profile",
@@ -93,7 +94,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
         maxComparePremium: "Compare up to 12 devices",
         aiAssistant: "AI Assistant"
       },
-      uploadError: "Unable to upload image."
+      uploadError: "Unable to upload image.",
+      uploadGenericError: "Upload error.",
     }
   };
 
@@ -128,23 +130,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
     setUploadError(null);
 
     try {
+      // Now returns a Base64 string instead of a storage URL
       const downloadURL = await uploadProfileImage(user.uid, file);
       setNewPhotoURL(downloadURL);
     } catch (error: any) {
       console.error("Upload failed:", error);
-      
-      let msg = text.uploadError;
-      if (error.code === 'storage/unauthorized') {
-        msg = language === 'it' ? "Errore permessi: Verifica regole Firebase Storage." : "Permission error: Check Firebase Storage rules.";
-      } else if (error.code === 'storage/retry-limit-exceeded') {
-        msg = language === 'it' ? "Timeout connessione. Riprova." : "Connection timeout. Try again.";
-      } else if (error.code === 'storage/object-not-found' || error.code === 'storage/bucket-not-found') {
-        msg = language === 'it' ? "Storage non configurato su Firebase." : "Firebase Storage not configured.";
-      } else {
-        msg = `${msg} (${error.code || 'unknown'})`;
-      }
-      
-      setUploadError(msg);
+      setUploadError(text.uploadGenericError);
     } finally {
       setIsUploading(false);
       // Reset input value so same file can be selected again if needed

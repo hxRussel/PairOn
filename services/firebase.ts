@@ -21,17 +21,10 @@ import {
   orderBy,
   serverTimestamp,
   setDoc,
-  getDoc,
   updateDoc,
   arrayUnion,
   arrayRemove
 } from 'firebase/firestore';
-import { 
-  getStorage, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL 
-} from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -47,7 +40,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
+// Storage removed due to region limitations on free tier
+// const storage = getStorage(app); 
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -330,31 +324,63 @@ export const removeCustomOption = async (userId: string, category: keyof CustomO
   }, { merge: true });
 };
 
-// --- Storage Services ---
+// --- Image Handling Services (Base64 Strategy) ---
+
+// Helper: Compress image and convert to Base64
+// This avoids using Firebase Storage which requires a paid plan or specific region
+const compressAndConvertToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Max dimensions for compression
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Convert to Base64 JPEG with 0.7 quality
+        // This ensures the string fits within Firestore document limits (1MB)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(new Error("Failed to load image for compression"));
+    };
+    reader.onerror = (err) => reject(new Error("Failed to read file"));
+  });
+};
 
 export const uploadProfileImage = async (userId: string, file: File): Promise<string> => {
-  // Create a reference to 'users/USER_ID/profile_TIMESTAMP'
-  const fileName = `profile_${Date.now()}_${file.name}`;
-  const storageRef = ref(storage, `users/${userId}/${fileName}`);
-  
-  // Upload file with metadata
-  const metadata = {
-    contentType: file.type,
-  };
-  
-  const snapshot = await uploadBytes(storageRef, file, metadata);
-  
-  // Get download URL
-  return await getDownloadURL(snapshot.ref);
+  // Previously used Storage, now uses direct Base64 compression
+  return await compressAndConvertToBase64(file);
 };
 
 export const uploadSmartphoneImage = async (userId: string, file: File): Promise<string> => {
-  const fileName = `phone_${Date.now()}_${file.name}`;
-  const storageRef = ref(storage, `users/${userId}/devices/${fileName}`);
-  
-  const metadata = { contentType: file.type };
-  const snapshot = await uploadBytes(storageRef, file, metadata);
-  return await getDownloadURL(snapshot.ref);
+  // Previously used Storage, now uses direct Base64 compression
+  return await compressAndConvertToBase64(file);
 };
 
-export { auth, db, storage };
+export { auth, db };
