@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -53,6 +54,18 @@ export const signInWithGoogle = async (): Promise<User> => {
     return result.user;
   } catch (error: any) {
     console.error("Error signing in with Google", error);
+    
+    // Handle the specific "Disallowed User Agent" error common in WebViews/APKs
+    if (error.code === 'auth/operation-not-allowed' || error.code === 'auth/unauthorized-domain' || error.message.includes('disallowed_useragent')) {
+       const isWebView = navigator.userAgent.includes('wv') || (window as any).Android;
+       
+       if (isWebView) {
+         throw new Error(
+           "Google blocca l'accesso da questa App per sicurezza (User Agent WebView).\n\n" +
+           "SOLUZIONE: Usa l'accesso con Email e Password, oppure prova a cambiare l'impostazione 'User Agent' nel costruttore dell'app."
+         );
+       }
+    }
     
     if (error.code === 'auth/unauthorized-domain') {
       const domain = window.location.hostname || window.location.host;

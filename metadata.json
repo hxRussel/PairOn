@@ -1,5 +1,7 @@
 {
   "name": "PairOn",
   "description": "AI-powered smartphone comparison application featuring a secure login and intelligent device analysis.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

@@ -64,8 +64,9 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       disclaimer: "L'AI può commettere errori. Verifica le informazioni.",
       sending: "Sto analizzando...",
       clear: "Nuova Chat",
-      errorKey: "Errore API Key: Impossibile inizializzare l'AI. Contatta lo sviluppatore.",
-      errorGen: "Errore di connessione."
+      errorKey: "ERRORE CONFIGURAZIONE: API Key mancante o non valida. Verifica le impostazioni di Vercel.",
+      errorGen: "Errore di connessione. Riprova.",
+      sessionFail: "Impossibile avviare la sessione AI."
     },
     en: {
       title: "PairOn AI",
@@ -81,8 +82,9 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       disclaimer: "AI can make mistakes. Please verify info.",
       sending: "Analyzing...",
       clear: "New Chat",
-      errorKey: "API Key Error: Could not initialize AI. Contact developer.",
-      errorGen: "Connection error."
+      errorKey: "CONFIG ERROR: API Key missing or invalid. Check Vercel settings.",
+      errorGen: "Connection error. Please try again.",
+      sessionFail: "Could not start AI session."
     }
   };
 
@@ -133,9 +135,14 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
         const chat = createChatSession(systemInstruction);
         setChatSession(chat);
         setInitError(null);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Chat Init Error:", err);
-        setInitError(text.errorKey);
+        // If key is explicitly missing based on the error from services/gemini.ts
+        if (err.message && err.message.includes("API Key")) {
+           setInitError(text.errorKey);
+        } else {
+           setInitError(text.sessionFail);
+        }
       }
     };
 
@@ -145,12 +152,22 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
     
-    if (!chatSession) {
-       // If chat session failed to init (missing key), show error message immediately
+    // If there was an initialization error, show it as a message immediately
+    if (initError) {
        setMessages(prev => [...prev, {
          id: Date.now().toString(),
          role: 'model',
-         text: initError || text.errorKey,
+         text: initError,
+         isError: true
+       }]);
+       return;
+    }
+    
+    if (!chatSession) {
+       setMessages(prev => [...prev, {
+         id: Date.now().toString(),
+         role: 'model',
+         text: text.errorGen,
          isError: true
        }]);
        return;
@@ -178,9 +195,15 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
       setMessages(prev => [...prev, newAiMsg]);
     } catch (error: any) {
       console.error("Gemini Error:", error);
-      const errorMessage = error.message?.includes("API Key") 
-        ? text.errorKey 
-        : (language === 'it' ? "Scusa, problema di connessione. Assicurati che l'app abbia accesso a internet." : "Connection issue. Ensure app has internet access.");
+      // More explicit error handling
+      let errorMessage = text.errorGen;
+      if (error.message?.includes("API Key") || error.message?.includes("403")) {
+         errorMessage = text.errorKey;
+      } else if (error.message?.includes("fetch") || error.message?.includes("network")) {
+         errorMessage = language === 'it' 
+           ? "Errore di rete. Controlla la connessione." 
+           : "Network error. Check connection.";
+      }
       
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -196,8 +219,6 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
 
   const handleClearChat = () => {
     setMessages([]);
-    // Re-init handled by effect dependencies or simple reset
-    // Just clearing messages is enough for UI reset
   };
 
   return (
@@ -232,11 +253,15 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
 
       {/* Chat Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-hide">
-        {/* Critical Init Error Banner */}
+        
+        {/* Critical Init Error Banner - Always visible at top if Init failed */}
         {initError && (
-           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 mb-4 animate-pulse">
-              <AlertTriangle className="text-red-500 shrink-0" />
-              <p className="text-xs font-bold text-red-500">{initError}</p>
+           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 mb-4 animate-pulse">
+              <AlertTriangle className="text-red-500 shrink-0 mt-0.5" />
+              <div>
+                 <p className="text-xs font-bold text-red-500 mb-1">System Error</p>
+                 <p className="text-xs text-red-400 opacity-80">{initError}</p>
+              </div>
            </div>
         )}
 
@@ -268,15 +293,12 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
             let match;
             const originalText = msg.text || "";
             
-            // Use matchAll or loop to get all IDs
             while ((match = viewIdRegex.exec(originalText)) !== null) {
                if(match[1]) ids.push(match[1].trim());
             }
             
-            // Clean text for display by removing ID tags
             const cleanText = originalText.replace(viewIdRegex, '').trim();
 
-            // Process Markdown Bold (**text**)
             const formattedContent = cleanText.split('**').map((part, i) => 
               i % 2 === 1 ? <strong key={i}>{part}</strong> : part
             );
@@ -301,10 +323,8 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
                      </div>
                   )}
                   
-                  {/* Render formatted text (with bolding) instead of raw text */}
                   {formattedContent}
                   
-                  {/* Interactive Cards */}
                   {ids.length > 0 && (
                      <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-gray-500/10">
                         {ids.map((id, i) => {
@@ -337,14 +357,12 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Disclaimer */}
       {messages.length > 0 && (
          <div className={`px-6 text-center py-1 text-[10px] ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
             {text.disclaimer}
          </div>
       )}
 
-      {/* Input Area - Padding reduced since navbar is hidden */}
       <div className={`p-4 pb-8 px-6 ${isDark ? 'bg-pairon-obsidian' : 'bg-pairon-ghost'}`}>
         <div className={`flex items-center gap-2 p-2 rounded-[1.5rem] border transition-all focus-within:border-pairon-mint focus-within:ring-1 focus-within:ring-pairon-mint/20 ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-200 shadow-lg shadow-gray-200/50'}`}>
           <input 
