@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap, HardDrive, Aperture } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap, HardDrive, Aperture, Lock } from 'lucide-react';
 import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
@@ -17,6 +17,9 @@ interface DashboardProps {
   setThemeSetting: (theme: Theme) => void;
   effectiveTheme: 'light' | 'dark';
 }
+
+// --- CONSTANTS ---
+const FREE_PLAN_LIMIT = 10;
 
 // --- CUSTOM ICONS ---
 const AiIcon = ({ size = 24, strokeWidth = 2, style, className, ...props }: any) => (
@@ -371,6 +374,23 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [isProfileOpen]); 
 
+  // Determine which phones are locked (the excess new ones for free users)
+  // savedPhones is already sorted by createdAt DESC (Newest first) from Firestore
+  const lockedPhoneIds = useMemo(() => {
+    if (userSettings.isPremium) return new Set<string>();
+    
+    const ids = new Set<string>();
+    const excessCount = Math.max(0, savedPhones.length - FREE_PLAN_LIMIT);
+    
+    // Lock the first 'excessCount' items (which are the newest ones)
+    for (let i = 0; i < excessCount; i++) {
+      if (savedPhones[i].id) {
+        ids.add(savedPhones[i].id!);
+      }
+    }
+    return ids;
+  }, [savedPhones, userSettings.isPremium]);
+
   // Reset comparison state when changing tabs
   useEffect(() => {
     if (activeTab !== 2) {
@@ -513,6 +533,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // Comparison Handlers
   const handleToggleSelection = (phoneId: string) => {
+     // Prevent selecting locked phones
+     if (lockedPhoneIds.has(phoneId)) {
+       setIsPremiumModalOpen(true);
+       return;
+     }
+
      if (selectedPhoneIds.includes(phoneId)) {
         setSelectedPhoneIds(prev => prev.filter(id => id !== phoneId));
      } else {
@@ -877,16 +903,25 @@ const Dashboard: React.FC<DashboardProps> = ({
               ) : (
                 selectionList.map((phone) => {
                   const isSelected = selectedPhoneIds.includes(phone.id || '');
+                  const isLocked = phone.id ? lockedPhoneIds.has(phone.id) : false;
+
                   return (
                     <div 
                       key={phone.id}
                       onClick={() => phone.id && handleToggleSelection(phone.id)}
-                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all active:scale-[0.98] ${
+                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all active:scale-[0.98] relative overflow-hidden ${
                         isSelected 
                           ? 'bg-pairon-mint/10 border-pairon-mint ring-1 ring-pairon-mint' 
                           : (isDark ? 'bg-pairon-surface border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm')
                       }`}
                     >
+                       {/* Lock Overlay for Selection */}
+                       {isLocked && (
+                         <div className="absolute inset-0 bg-black/60 z-20 flex items-center justify-center backdrop-blur-[1px]">
+                            <Lock size={20} className="text-white/80" />
+                         </div>
+                       )}
+
                        <div className="flex items-center gap-4">
                           {/* Selection Circle */}
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'bg-white/10 text-transparent' : 'bg-gray-200 text-transparent')}`}>
@@ -983,48 +1018,63 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {savedPhones.length === 0 ? text.empty : (language === 'it' ? 'Nessun risultato trovato.' : 'No results found.')}
                  </div>
               ) : (
-                filteredAndSortedPhones.map((phone) => (
-                  <div 
-                    key={phone.id}
-                    onClick={() => setViewingPhone(phone)} // Open Read Only on card click
-                    className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${isDark ? 'bg-pairon-surface border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm'}`}
-                  >
-                     <div className="flex items-center gap-4">
-                        {/* Thumbnail */}
-                        <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${phone.color}`}>
-                           {phone.imageUrl ? (
-                             <img src={phone.imageUrl} alt="" className="w-full h-full object-cover" />
-                           ) : (
-                             <div className="w-full h-full flex items-center justify-center text-white/20">
-                               <Smartphone size={20} />
-                             </div>
-                           )}
-                        </div>
-                        
-                        {/* Text Info */}
-                        <div>
-                           <div className={`text-xs font-medium mb-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{phone.brand}</div>
-                           <h3 className={`font-bold leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>{phone.model}</h3>
-                        </div>
-                     </div>
+                filteredAndSortedPhones.map((phone) => {
+                  const isLocked = phone.id ? lockedPhoneIds.has(phone.id) : false;
+                  
+                  return (
+                    <div 
+                      key={phone.id}
+                      onClick={() => isLocked ? setIsPremiumModalOpen(true) : setViewingPhone(phone)}
+                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden ${isDark ? 'bg-pairon-surface border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm'}`}
+                    >
+                       {/* Lock Overlay */}
+                       {isLocked && (
+                         <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                            <div className="bg-black/40 p-2 rounded-full backdrop-blur-md border border-white/10">
+                               <Lock size={20} className="text-white/80" />
+                            </div>
+                         </div>
+                       )}
 
-                     {/* Actions */}
-                     <div className="flex items-center gap-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setEditingPhone(phone); }}
-                          className={`p-2 rounded-full transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
-                        >
-                           <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={(e) => handleDeleteClick(e, phone)}
-                          className={`p-2 rounded-full transition-colors ${isDark ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-red-50 hover:bg-red-100 text-red-500'}`}
-                        >
-                           <Trash2 size={16} />
-                        </button>
-                     </div>
-                  </div>
-                ))
+                       <div className={`flex items-center gap-4 ${isLocked ? 'opacity-40' : ''}`}>
+                          {/* Thumbnail */}
+                          <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${phone.color}`}>
+                             {phone.imageUrl ? (
+                               <img src={phone.imageUrl} alt="" className="w-full h-full object-cover" />
+                             ) : (
+                               <div className="w-full h-full flex items-center justify-center text-white/20">
+                                 <Smartphone size={20} />
+                               </div>
+                             )}
+                          </div>
+                          
+                          {/* Text Info */}
+                          <div>
+                             <div className={`text-xs font-medium mb-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{phone.brand}</div>
+                             <h3 className={`font-bold leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>{phone.model}</h3>
+                          </div>
+                       </div>
+
+                       {/* Actions */}
+                       <div className="flex items-center gap-2 relative z-20">
+                          {!isLocked && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setEditingPhone(phone); }}
+                              className={`p-2 rounded-full transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          )}
+                          <button 
+                            onClick={(e) => handleDeleteClick(e, phone)}
+                            className={`p-2 rounded-full transition-colors ${isDark ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-red-50 hover:bg-red-100 text-red-500'}`}
+                          >
+                             <Trash2 size={16} />
+                          </button>
+                       </div>
+                    </div>
+                  );
+                })
               )}
            </div>
         </div>
@@ -1075,10 +1125,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               const currencySymbol = userSettings.currency === 'USD' ? '$' : userSettings.currency === 'GBP' ? '£' : userSettings.currency === 'JPY' ? '¥' : '€';
 
+              const isLocked = phone.id ? lockedPhoneIds.has(phone.id) : false;
+
               return (
               <div 
                 key={phone.id} 
-                onClick={() => setViewingPhone(phone)} // Default click opens view mode
+                onClick={() => isLocked ? setIsPremiumModalOpen(true) : setViewingPhone(phone)}
                 className="snap-start shrink-0 w-72 h-[26rem] relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer shadow-xl"
               >
                 {/* Background Gradient */}
@@ -1087,9 +1139,22 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <img src={phone.imageUrl} alt={phone.model} className="w-full h-full object-cover mix-blend-overlay opacity-50" />
                   )}
                 </div>
+
+                {/* Lock Overlay */}
+                {isLocked && (
+                  <div className="absolute inset-0 bg-black/70 z-20 flex flex-col items-center justify-center backdrop-blur-[2px] p-4 text-center">
+                     <div className="bg-white/10 p-4 rounded-full mb-3 backdrop-blur-md border border-white/10 shadow-lg">
+                       <Lock size={32} className="text-white/90" />
+                     </div>
+                     <p className="text-white font-bold text-lg">Premium Content</p>
+                     <p className="text-white/60 text-xs mt-1 mb-4">
+                       {language === 'it' ? 'Sblocca per accedere' : 'Unlock to access'}
+                     </p>
+                  </div>
+                )}
                 
                 {/* Content Container */}
-                <div className="absolute inset-0 p-5 flex flex-col justify-between text-white">
+                <div className={`absolute inset-0 p-5 flex flex-col justify-between text-white ${isLocked ? 'opacity-30 pointer-events-none' : ''}`}>
                   
                   {/* Top Section: Brand & Actions */}
                   <div className="flex justify-between items-start z-10">
@@ -1098,22 +1163,29 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                     
                     {/* ACTION BUTTONS */}
-                    <div className="flex gap-1 bg-black/30 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-lg" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        onClick={() => setViewingPhone(phone)}
-                        className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
-                      >
-                         <Eye size={14} />
-                      </button>
-                      <button 
-                        onClick={() => setEditingPhone(phone)}
-                        className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
-                      >
-                         <Edit2 size={14} />
-                      </button>
+                    <div className="flex gap-1 bg-black/30 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-lg pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                       {!isLocked && (
+                         <>
+                            <button 
+                              onClick={() => setViewingPhone(phone)}
+                              className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button 
+                              onClick={() => setEditingPhone(phone)}
+                              className="p-2 hover:bg-white/20 rounded-full transition-colors text-white"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                         </>
+                       )}
+                      {/* Trash button must be outside the locked overlay's visual block (or inside but accessible). 
+                          Since we apply pointer-events-none to the container, we must ensure this div has pointer-events-auto. 
+                          Even if card is locked, user can delete. */}
                       <button 
                         onClick={(e) => handleDeleteClick(e, phone)}
-                        className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white"
+                        className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white pointer-events-auto relative z-50"
                       >
                         <Trash2 size={14} />
                       </button>

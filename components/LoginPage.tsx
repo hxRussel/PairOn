@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AuthState, Language } from '../types';
 import { signInWithGoogle, loginWithEmail, resetUserPassword } from '../services/firebase';
@@ -46,7 +47,7 @@ const ErrorModal: React.FC<{ message: string; onClose: () => void; isDark: boole
         <div className="flex-1 min-w-0">
           <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-pairon-obsidian'}`}>Attenzione</h3>
           <div className={`rounded-lg p-3 border mb-4 select-text cursor-text ${isDark ? 'bg-black/50 border-white/5' : 'bg-gray-50 border-gray-200'}`}>
-             <p className={`text-sm font-mono break-words whitespace-pre-wrap leading-relaxed select-text cursor-text ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+             <p className={`text-sm font-medium break-words whitespace-pre-wrap leading-relaxed select-text cursor-text ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                {message}
              </p>
           </div>
@@ -89,7 +90,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       feat2: "Confronto specifiche in tempo reale",
       googleError: "Errore durante l'accesso con Google. Riprova.",
       googleBtn: "Accedi con Google",
-      genericError: "Credenziali non valide o errore di connessione.",
+      genericError: "Errore di connessione. Riprova.",
       emailReq: "Inserisci la tua email nel campo sopra per reimpostare la password.",
       emailSent: "Email di recupero inviata! Controlla la tua posta (anche nello spam)."
     },
@@ -110,7 +111,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       feat2: "Real-time specs comparison",
       googleError: "Error signing in with Google. Please try again.",
       googleBtn: "Sign in with Google",
-      genericError: "Invalid credentials or connection error.",
+      genericError: "Connection error. Please try again.",
       emailReq: "Please enter your email in the field above to reset your password.",
       emailSent: "Recovery email sent! Check your inbox (and spam folder)."
     }
@@ -126,7 +127,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       setAuthState(AuthState.DASHBOARD);
     } catch (error: any) {
       console.error(error);
-      setErrorState({ show: true, message: error.message || text.genericError });
+      
+      // Simplify error message for user experience
+      let displayMessage = text.genericError;
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+         displayMessage = language === 'it' 
+           ? "Email o password errata. Riprova."
+           : "Incorrect email or password. Please try again.";
+      } else if (error.code === 'auth/too-many-requests') {
+         displayMessage = language === 'it'
+           ? "Troppi tentativi falliti. Riprova più tardi."
+           : "Too many failed attempts. Please try again later.";
+      } else if (error.code === 'auth/invalid-email') {
+         displayMessage = language === 'it'
+           ? "Formato email non valido."
+           : "Invalid email format.";
+      }
+
+      setErrorState({ show: true, message: displayMessage });
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +162,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       alert(text.emailSent);
     } catch (error: any) {
       console.error(error);
-      setErrorState({ show: true, message: error.message || text.genericError });
+      // Simple error for reset too
+      const msg = language === 'it' ? "Impossibile inviare email. Verifica l'indirizzo." : "Could not send email. Check the address.";
+      setErrorState({ show: true, message: msg });
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +181,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setAuthState, language, setLangua
       setAuthState(AuthState.DASHBOARD);
     } catch (error: any) {
       console.error(error);
-      setErrorState({ show: true, message: error.message || text.googleError });
+      setErrorState({ show: true, message: text.googleError });
     } finally {
       setIsLoading(false);
     }
