@@ -2,18 +2,32 @@
 import { GoogleGenAI } from "@google/genai";
 import { Language } from '../types';
 
-// Helper to get the client strictly from process.env.API_KEY as per guidelines
+// Helper to get the client with prioritized environment variable checks
 const getAiClient = () => {
-  // Strictly following guidelines to use process.env.API_KEY
-  // @ts-ignore
-  const key = process.env.API_KEY;
-  
   console.log("Gemini Service: Initializing client...");
+
+  // 1. Try VITE_API_KEY (Standard for Vite/React apps)
+  // 2. Try process.env.VITE_API_KEY (Sometimes populated by Vercel)
+  // 3. Fallback to process.env.API_KEY (Standard Node)
+  // @ts-ignore
+  const key = import.meta.env?.VITE_API_KEY || process.env?.VITE_API_KEY || process.env?.API_KEY;
   
   if (!key) {
-    console.error("Gemini Service CRITICAL ERROR: process.env.API_KEY is missing.");
-    console.warn("Troubleshooting: If you are on Vercel/Vite, ensure 'API_KEY' is set in your Vercel Project Settings environment variables.");
-    throw new Error("API Key missing. Please check process.env.API_KEY configuration.");
+    console.error("Gemini Service CRITICAL ERROR: API Key is missing.");
+    console.warn("Troubleshooting:");
+    console.warn("1. Vercel: Ensure you have a variable named 'VITE_API_KEY' in Project Settings.");
+    console.warn("2. Local: Ensure you have 'VITE_API_KEY=...' in your .env file.");
+    console.log("Environment Check:", {
+      // @ts-ignore
+      hasMetaEnv: !!import.meta.env?.VITE_API_KEY,
+      // @ts-ignore
+      hasProcessVite: !!process.env?.VITE_API_KEY,
+      // @ts-ignore
+      hasProcessStd: !!process.env?.API_KEY
+    });
+    throw new Error("API Key missing. Please check VITE_API_KEY configuration in Vercel.");
+  } else {
+    console.log("Gemini Service: API Key found and loaded.");
   }
 
   return new GoogleGenAI({ apiKey: key });
@@ -40,7 +54,7 @@ export const getSmartphoneComparison = async (phone1: string, phone2: string, la
   } catch (error: any) {
     console.error("Gemini API Error in getSmartphoneComparison:", error);
     if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
-      return lang === 'it' ? "Errore: Chiave API non valida o mancante." : "Config Error: API Key missing.";
+      return lang === 'it' ? "Errore Configurazione: Chiave API non trovata (VITE_API_KEY)." : "Config Error: API Key missing (VITE_API_KEY).";
     }
     return lang === 'it' ? "Si è verificato un errore durante la connessione all'assistente AI." : "An error occurred while connecting to the AI assistant.";
   }
