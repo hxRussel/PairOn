@@ -1,7 +1,8 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2 } from 'lucide-react';
 import { Language } from '../types';
-import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
+import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings, addCustomOption, CustomOptions } from '../services/firebase';
 import { Loader } from './Loader';
 import SmartSelector from './SmartSelector';
 
@@ -564,6 +565,33 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     };
 
     try {
+      // Sync all text fields to Custom Options Dictionary in Firestore
+      const uid = auth.currentUser.uid;
+      const optionUpdates: Promise<void>[] = [];
+
+      const safeAdd = (category: keyof CustomOptions, val: string) => {
+          if (val && val.trim()) {
+              optionUpdates.push(addCustomOption(uid, category, val.trim()));
+          }
+      };
+
+      safeAdd('brands', brand);
+      safeAdd('chips', chip);
+      safeAdd('ipRatings', ipRating);
+      safeAdd('haptics', haptics);
+      safeAdd('osVersions', os);
+      if (hasCustomUi) safeAdd('uiVersions', customUi);
+
+      rams.forEach(r => safeAdd('ramTypes', r.type));
+      storages.forEach(s => safeAdd('storageTypes', s.type));
+      displays.forEach(d => safeAdd('displayTypes', d.type));
+      cameras.forEach(c => safeAdd('cameraTypes', c.type));
+      if (hasFaceId) safeAdd('faceIdTypes', faceIdType);
+      if (hasFingerprint) safeAdd('fingerprintTypes', fingerprintType);
+
+      // Run option updates in background (best effort)
+      Promise.all(optionUpdates).catch(err => console.error("Failed to sync custom options", err));
+
       if (initialData && initialData.id) {
         // Update existing
         await updateSmartphone(auth.currentUser.uid, initialData.id, phoneData);
