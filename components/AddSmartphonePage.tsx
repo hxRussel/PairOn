@@ -237,6 +237,10 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   
   const labelColor = isDark ? 'text-gray-400' : 'text-gray-500';
 
+  const guestWarningText = language === 'it' 
+      ? "Gli utenti ospiti non possono modificare l'immagine del profilo e non possono aggiungere foto agli smartphone."
+      : "Guest users cannot change profile picture and cannot add photos to smartphones.";
+
   // Fetch Currency Settings
   useEffect(() => {
      if (auth.currentUser) {
@@ -711,11 +715,13 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 onClick={() => {
                   if (previewUrl) {
                     setIsImageFullscreen(true);
-                  } else if (!isReadOnly && !isGuest) {
+                  } else if (isGuest) {
+                     setError(guestWarningText);
+                  } else if (!isReadOnly) {
                     fileInputRef.current?.click();
                   }
                 }}
-                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || (!isReadOnly && !isGuest)) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && !isGuest && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
+                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || (!isReadOnly)) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && !isGuest && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
               >
                 <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" disabled={isReadOnly || isGuest} />
                 

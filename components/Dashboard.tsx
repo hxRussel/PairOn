@@ -917,7 +917,7 @@ const Dashboard: React.FC<DashboardProps> = ({
            
            {/* First Time Tutorial Card Overlay */}
            {showCompareTutorial && (
-             <div className="absolute inset-x-6 top-24 z-40 animate-blob">
+             <div className="absolute inset-x-6 top-24 z-40 animate-fade-in">
                <div className={`p-6 rounded-3xl shadow-2xl border backdrop-blur-xl relative overflow-hidden ${isDark ? 'bg-pairon-surface/95 border-pairon-mint/30' : 'bg-white/95 border-pairon-indigo/30'}`}>
                   <div className="absolute top-0 right-0 w-32 h-32 bg-pairon-mint/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                   

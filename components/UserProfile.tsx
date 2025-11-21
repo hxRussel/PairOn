@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, updateUserProfile, setUserPremiumStatus, subscribeToUserSettings, UserSettings, uploadProfileImage, saveUserProfileImage, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
-import { X, User, Camera, Crown, Check, X as XIcon, Shield, Code, AlertTriangle, Lock } from 'lucide-react';
+import { X, User, Camera, Crown, Check, X as XIcon, Shield, Code, AlertTriangle, Lock, Trash2, Cloud } from 'lucide-react';
 import { Language } from '../types';
 
 interface UserProfileProps {
@@ -76,6 +76,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       features: {
         maxPhones: "Max 10 Smartphone salvati",
         maxCompare: "Confronta max 6 dispositivi",
+        cloudSave: "Salvataggio Cloud",
         noAds: "Nessuna pubblicità",
         aiFeatures: "Assistente AI",
         infPhones: "Smartphone infiniti",
@@ -84,7 +85,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       },
       uploadError: "Impossibile caricare l'immagine.",
       uploadGenericError: "Errore caricamento.",
-      guestNoPhoto: "Immagine bloccata per Ospiti"
+      guestNoPhoto: "Immagine bloccata per Ospiti",
+      guestRestrictedMsg: "Gli utenti ospiti non possono modificare l'immagine del profilo e non possono aggiungere foto agli smartphone."
     },
     en: {
       title: "User Profile",
@@ -105,6 +107,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       features: {
         maxPhones: "Max 10 saved Smartphones",
         maxCompare: "Compare max 6 devices",
+        cloudSave: "Cloud Data Save",
         noAds: "No ads",
         aiFeatures: "AI Assistant",
         infPhones: "Unlimited Smartphones",
@@ -113,7 +116,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       },
       uploadError: "Unable to upload image.",
       uploadGenericError: "Upload error.",
-      guestNoPhoto: "Image locked for Guests"
+      guestNoPhoto: "Image locked for Guests",
+      guestRestrictedMsg: "Guest users cannot change profile picture and cannot add photos to smartphones."
     }
   };
 
@@ -126,9 +130,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       // 1. Update Name in Auth
       await updateUserProfile(newName);
       
-      // 2. Update Image in Firestore if it's a Base64 string (new upload)
-      if (newPhotoURL && newPhotoURL.startsWith('data:image') && !isGuest) {
-         await saveUserProfileImage(user.uid, newPhotoURL);
+      // 2. Update Image in Firestore
+      if (!isGuest) {
+          // If it's a new base64 upload OR if it's explicitly empty (user deleted it), save it.
+          if (newPhotoURL === '' || newPhotoURL.startsWith('data:image')) {
+             await saveUserProfileImage(user.uid, newPhotoURL);
+          }
       }
 
       setIsEditing(false);
@@ -141,10 +148,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
   };
 
   const handlePhotoClick = () => {
-    if (!isEditing || isGuest) return;
+    if (isGuest) {
+      setUploadError(text.guestRestrictedMsg);
+      return;
+    }
+    if (!isEditing) return;
     setUploadError(null);
     // Trigger file input click
     fileInputRef.current?.click();
+  };
+
+  const handleRemovePhoto = () => {
+    if (!isEditing || isGuest) return;
+    setNewPhotoURL('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,7 +226,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
             <div className="flex flex-col items-center gap-2">
               <div className="relative group">
                 <div 
-                  className={`w-24 h-24 rounded-full overflow-hidden border-4 ${isDark ? 'border-pairon-surface' : 'border-gray-100'} shadow-lg ${isEditing && !isGuest ? 'cursor-pointer' : ''} relative`}
+                  className={`w-24 h-24 rounded-full overflow-hidden border-4 ${isDark ? 'border-pairon-surface' : 'border-gray-100'} shadow-lg ${isEditing ? 'cursor-pointer' : ''} relative`}
                   onClick={handlePhotoClick}
                 >
                    {isUploading ? (
@@ -231,6 +248,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                       </div>
                    )}
                 </div>
+                
+                {/* Hover Effect for Camera */}
                 {!isGuest && isEditing && !isUploading && (
                   <div 
                     className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
@@ -239,18 +258,32 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                     <Camera className="text-white" size={24} />
                   </div>
                 )}
+                
+                {/* Trash Icon for Deletion */}
+                {isEditing && !isGuest && newPhotoURL && (
+                   <button
+                     onClick={handleRemovePhoto}
+                     className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors z-20"
+                     title="Rimuovi foto"
+                   >
+                     <Trash2 size={14} />
+                   </button>
+                )}
               </div>
               
               {/* Error Message Display */}
               {uploadError && (
-                <div className="text-red-500 text-xs text-center max-w-[200px] flex items-center justify-center gap-1 animate-fade-in bg-red-500/10 px-2 py-1 rounded-md">
-                  <AlertTriangle size={12} />
+                <div className="text-red-500 text-xs text-center max-w-[200px] flex flex-col items-center justify-center gap-1 animate-fade-in bg-red-500/10 px-2 py-2 rounded-md">
+                  <div className="flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    <span className="font-bold">Error</span>
+                  </div>
                   <span>{uploadError}</span>
                 </div>
               )}
               
               {/* Guest Warning Label */}
-              {isGuest && isEditing && (
+              {isGuest && isEditing && !uploadError && (
                  <span className="text-xs text-yellow-500 font-medium mt-1">{text.guestNoPhoto}</span>
               )}
             </div>
@@ -278,8 +311,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                       onClick={() => { 
                         setIsEditing(false); 
                         setNewName(user?.displayName || ''); 
-                        // Reset preview to what's in Auth or Firestore (via subscription effect it will reset)
+                        // Reset preview
                         setUploadError(null);
+                        // Re-fetch or reset photo state (subscription will handle it if not saved, but explicit reset here is good UI)
+                        // Just closing edit mode is enough as useEffect will re-sync if needed, but let's just hide input.
                       }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-200 hover:bg-gray-300'}`}
                     >
@@ -346,6 +381,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                 <div className="space-y-2">
                   <PlanFeature text={text.features.maxPhones} included={true} />
                   <PlanFeature text={text.features.maxCompare} included={true} />
+                  <PlanFeature text={text.features.cloudSave} included={true} />
                   <PlanFeature text={text.features.noAds} included={true} />
                   <PlanFeature text={text.features.aiFeatures} included={false} />
                 </div>
@@ -365,6 +401,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                 <div className="space-y-2">
                   <PlanFeature text={text.features.infPhones} included={true} />
                   <PlanFeature text={text.features.maxComparePremium} included={true} />
+                  <PlanFeature text={text.features.cloudSave} included={true} />
                   <PlanFeature text={text.features.noAds} included={true} />
                   <PlanFeature text={text.features.aiAssistant} included={true} />
                 </div>

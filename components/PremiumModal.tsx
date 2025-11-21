@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { X, Check, Crown, Smartphone, Layers, Sparkles, Shield } from 'lucide-react';
+import { X, Check, Crown, Smartphone, Layers, Sparkles, Shield, Cloud } from 'lucide-react';
 import { Language } from '../types';
 
 interface PremiumModalProps {
@@ -23,6 +24,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, isDark, la
       features: [
         { name: "Smartphone Salvati", free: "Max 10", premium: "Illimitati", icon: Smartphone },
         { name: "Comparazione", free: "Max 6", premium: "Max 12", icon: Layers },
+        { name: "Salvataggio Cloud", free: true, premium: true, icon: Cloud },
         { name: "AI Assistant", free: false, premium: true, icon: Sparkles },
         { name: "Nessuna Pubblicità", free: true, premium: true, icon: Shield },
       ]
@@ -37,6 +39,7 @@ const PremiumModal: React.FC<PremiumModalProps> = ({ isOpen, onClose, isDark, la
       features: [
         { name: "Saved Smartphones", free: "Max 10", premium: "Unlimited", icon: Smartphone },
         { name: "Comparison", free: "Max 6", premium: "Max 12", icon: Layers },
+        { name: "Cloud Data Save", free: true, premium: true, icon: Cloud },
         { name: "AI Assistant", free: false, premium: true, icon: Sparkles },
         { name: "No Ads", free: true, premium: true, icon: Shield },
       ]
