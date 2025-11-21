@@ -1153,16 +1153,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 )}
                 
-                {/* Content Container */}
-                <div className={`absolute inset-0 p-5 flex flex-col justify-between text-white ${isLocked ? 'opacity-30 pointer-events-none' : ''}`}>
-                  
-                  {/* Top Section: Brand & Actions */}
-                  <div className="flex justify-between items-start z-10">
-                    <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10">
+                {/* HEADER: Brand & Actions - Moved out of content container to avoid opacity/pointer issues when locked. Z-30 places it above lock overlay. */}
+                <div className="absolute top-0 left-0 right-0 p-5 flex justify-between items-start z-30 pointer-events-none">
+                    <span className={`px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10 ${isLocked ? 'opacity-40' : ''}`}>
                       {phone.brand}
                     </span>
                     
-                    {/* ACTION BUTTONS */}
                     <div className="flex gap-1 bg-black/30 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-lg pointer-events-auto" onClick={(e) => e.stopPropagation()}>
                        {!isLocked && (
                          <>
@@ -1180,20 +1176,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </button>
                          </>
                        )}
-                      {/* Trash button must be outside the locked overlay's visual block (or inside but accessible). 
-                          Since we apply pointer-events-none to the container, we must ensure this div has pointer-events-auto. 
-                          Even if card is locked, user can delete. */}
+                      {/* Trash Button - Always Visible */}
                       <button 
                         onClick={(e) => handleDeleteClick(e, phone)}
-                        className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white pointer-events-auto relative z-50"
+                        className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
-                  </div>
+                </div>
 
-                  {/* Name - Positioned Higher */}
-                  <div className="mt-2">
+                {/* Content Container */}
+                <div className={`absolute inset-0 p-5 flex flex-col justify-between text-white ${isLocked ? 'opacity-30 pointer-events-none' : ''}`}>
+                  
+                  {/* Name - Positioned with margin to clear the absolute header */}
+                  <div className="mt-10">
                     <h3 className="text-2xl font-bold font-display leading-tight drop-shadow-md">{phone.model}</h3>
                     <div className="w-12 h-1 bg-pairon-mint rounded-full mt-1"></div>
                   </div>
