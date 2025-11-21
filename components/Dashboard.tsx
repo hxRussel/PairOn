@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthState, Language, Theme } from '../types';
-import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap, HardDrive, Aperture, Lock } from 'lucide-react';
+import { Home, Smartphone, Settings, Sparkles, Plus, Battery, Cpu, Moon, Sun, Monitor, Globe, Trash2, LogOut, Edit2, Eye, X, AlertTriangle, Banknote, DollarSign, Euro, PoundSterling, JapaneseYen, IndianRupee, Database, Search, Filter, ArrowUp, ArrowDown, ArrowUpDown, Calendar, Shield, Layers, CheckCircle2, Circle, ArrowLeft, Check, Zap, HardDrive, Aperture, Lock, ArrowRight } from 'lucide-react';
 import { auth, subscribeToSmartphones, removeSmartphone, PhoneData, logoutUser, setUserCurrency, subscribeToUserSettings, UserSettings, subscribeToCustomOptions, removeCustomOption, CustomOptions, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
 import UserProfile from './UserProfile';
@@ -307,6 +307,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [savedPhones, setSavedPhones] = useState<PhoneData[]>([]);
   const [loadingPhones, setLoadingPhones] = useState(true);
   const [customAvatar, setCustomAvatar] = useState<string | null>(null);
+  const [showCompareTutorial, setShowCompareTutorial] = useState(false);
   
   // Modal States
   const [isAddingPhone, setIsAddingPhone] = useState(false);
@@ -340,7 +341,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   const subTextColor = isDark ? 'text-gray-400' : 'text-gray-500';
   const navBg = isDark ? 'bg-pairon-surface/90 border-white/5 text-gray-400' : 'bg-[#E5E5EA]/80 border-white/40 text-gray-400';
 
+  const isGuest = auth.currentUser?.isAnonymous ?? false;
+
   useEffect(() => {
+    // Check LocalStorage for tutorial state
+    const hasSeenTutorial = localStorage.getItem('pairon_compare_tutorial_seen');
+    if (!hasSeenTutorial) {
+      setShowCompareTutorial(true);
+    }
+
     // Get current user name
     if (auth.currentUser?.displayName) {
       setUserName(auth.currentUser.displayName);
@@ -428,7 +437,10 @@ const Dashboard: React.FC<DashboardProps> = ({
          limitFree: "Max 6 dispositivi (Free)",
          limitPremium: "Max 12 dispositivi (Premium)",
          minSelection: "Seleziona almeno 2 dispositivi",
-         back: "Modifica Selezione"
+         back: "Modifica Selezione",
+         tutorialTitle: "Benvenuto nel sistema di comparazione PairOn!",
+         tutorialText: "Seleziona gli smartphone che vuoi comparare dalla lista qui sotto per iniziare un confronto dettagliato.",
+         tutorialBtn: "Inizia"
       }
     },
     en: {
@@ -459,7 +471,10 @@ const Dashboard: React.FC<DashboardProps> = ({
          limitFree: "Max 6 devices (Free)",
          limitPremium: "Max 12 devices (Premium)",
          minSelection: "Select at least 2 devices",
-         back: "Edit Selection"
+         back: "Edit Selection",
+         tutorialTitle: "Welcome to PairOn Comparison System!",
+         tutorialText: "Select the smartphones you want to compare from the list below to start a detailed comparison.",
+         tutorialBtn: "Start"
       }
     }
   };
@@ -598,6 +613,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     setIsAddingPhone(true);
   };
 
+  const dismissTutorial = () => {
+    localStorage.setItem('pairon_compare_tutorial_seen', 'true');
+    setShowCompareTutorial(false);
+  };
+
   // Render Add/Edit/View Phone Page Full Screen Overlay
   if (isAddingPhone || editingPhone || viewingPhone) {
     return (
@@ -611,6 +631,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         isDark={isDark}
         initialData={editingPhone || viewingPhone}
         isReadOnly={!!viewingPhone}
+        isGuest={isGuest}
       />
     );
   }
@@ -893,9 +914,34 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       return (
         <div className="px-6 pt-2 pb-32 animate-fade-in h-[calc(100vh-100px)] overflow-y-auto relative">
+           
+           {/* First Time Tutorial Card Overlay */}
+           {showCompareTutorial && (
+             <div className="absolute inset-x-6 top-24 z-40 animate-blob">
+               <div className={`p-6 rounded-3xl shadow-2xl border backdrop-blur-xl relative overflow-hidden ${isDark ? 'bg-pairon-surface/95 border-pairon-mint/30' : 'bg-white/95 border-pairon-indigo/30'}`}>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-pairon-mint/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                  
+                  <h3 className={`text-xl font-bold mb-3 pr-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {text.compare.tutorialTitle}
+                  </h3>
+                  <p className={`text-sm mb-6 leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {text.compare.tutorialText}
+                  </p>
+                  
+                  <button 
+                    onClick={dismissTutorial}
+                    className="w-full py-3 bg-gradient-to-r from-pairon-indigo to-pairon-blue hover:from-pairon-indigo/90 hover:to-pairon-blue/90 text-white font-bold rounded-xl shadow-lg shadow-pairon-indigo/20 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+                  >
+                    {text.compare.tutorialBtn}
+                    <ArrowRight size={18} />
+                  </button>
+               </div>
+             </div>
+           )}
+
            {commonHeader}
            
-           <div className="space-y-3 pb-24">
+           <div className={`space-y-3 pb-24 transition-opacity duration-300 ${showCompareTutorial ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
               {selectionList.length === 0 ? (
                  <div className={`text-center py-10 ${subTextColor}`}>
                     {savedPhones.length === 0 ? text.empty : (language === 'it' ? 'Nessun risultato trovato.' : 'No results found.')}
@@ -952,16 +998,18 @@ const Dashboard: React.FC<DashboardProps> = ({
            </div>
            
            {/* Floating Compare Action Button */}
-           <div className="fixed bottom-28 left-0 w-full px-6 z-30 flex justify-center pointer-events-none">
-              <button 
-                 onClick={() => setShowCompareView(true)}
-                 disabled={selectedPhoneIds.length < 2}
-                 className={`pointer-events-auto shadow-2xl backdrop-blur-xl px-8 py-4 rounded-full font-bold text-lg flex items-center gap-3 transition-all duration-500 transform ${selectedPhoneIds.length >= 2 ? 'translate-y-0 opacity-100 bg-gradient-to-r from-pairon-indigo to-pairon-blue text-white' : 'translate-y-10 opacity-0 bg-gray-500 text-gray-300'}`}
-              >
-                 <span className="font-display text-2xl">P</span>
-                 {text.compare.start} ({selectedPhoneIds.length})
-              </button>
-           </div>
+           {!showCompareTutorial && (
+            <div className="fixed bottom-28 left-0 w-full px-6 z-30 flex justify-center pointer-events-none">
+                <button 
+                    onClick={() => setShowCompareView(true)}
+                    disabled={selectedPhoneIds.length < 2}
+                    className={`pointer-events-auto shadow-2xl backdrop-blur-xl px-8 py-4 rounded-full font-bold text-lg flex items-center gap-3 transition-all duration-500 transform ${selectedPhoneIds.length >= 2 ? 'translate-y-0 opacity-100 bg-gradient-to-r from-pairon-indigo to-pairon-blue text-white' : 'translate-y-10 opacity-0 bg-gray-500 text-gray-300'}`}
+                >
+                    <span className="font-display text-2xl">P</span>
+                    {text.compare.start} ({selectedPhoneIds.length})
+                </button>
+            </div>
+           )}
         </div>
       );
     }
@@ -1271,6 +1319,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         onLogout={handleLogout}
         isDark={isDark}
         language={language}
+        isGuest={isGuest}
       />
 
       <DeleteConfirmationModal 

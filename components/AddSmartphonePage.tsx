@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
@@ -12,6 +12,7 @@ interface AddSmartphonePageProps {
   isDark: boolean;
   initialData?: PhoneData | null; // If present, we are in EDIT mode
   isReadOnly?: boolean; // If true, disable inputs
+  isGuest?: boolean; // New prop to handle guest restrictions
 }
 
 // --- DEFAULTS FOR SMART SELECTORS ---
@@ -136,7 +137,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   language, 
   isDark,
   initialData,
-  isReadOnly = false 
+  isReadOnly = false,
+  isGuest = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -336,7 +338,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   }, [initialData]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReadOnly) return;
+    if (isReadOnly || isGuest) return; // Block for Guest
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
@@ -346,7 +348,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   };
 
   const handleRemoveImage = () => {
-    if (isReadOnly) return;
+    if (isReadOnly || isGuest) return; // Block for Guest
     setImageFile(null);
     setPreviewUrl(null);
     setImageDeleted(true);
@@ -504,16 +506,19 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     let uploadedImageUrl = initialData?.imageUrl || '';
     
     // Logic to handle deletion or new upload
-    if (imageDeleted) {
-      uploadedImageUrl = '';
-    }
+    // Only allow image modifications if NOT a guest
+    if (!isGuest) {
+      if (imageDeleted) {
+        uploadedImageUrl = '';
+      }
 
-    // Try upload image if exists and changed
-    if (imageFile) {
-      try {
-        uploadedImageUrl = await uploadSmartphoneImage(auth.currentUser.uid, imageFile);
-      } catch (error) {
-        console.error("Image upload failed, saving data anyway", error);
+      // Try upload image if exists and changed
+      if (imageFile) {
+        try {
+          uploadedImageUrl = await uploadSmartphoneImage(auth.currentUser.uid, imageFile);
+        } catch (error) {
+          console.error("Image upload failed, saving data anyway", error);
+        }
       }
     }
 
@@ -706,13 +711,24 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 onClick={() => {
                   if (previewUrl) {
                     setIsImageFullscreen(true);
-                  } else if (!isReadOnly) {
+                  } else if (!isReadOnly && !isGuest) {
                     fileInputRef.current?.click();
                   }
                 }}
-                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || !isReadOnly) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
+                className={`w-64 h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all relative overflow-hidden group flex-shrink-0 shadow-lg ${(previewUrl || (!isReadOnly && !isGuest)) ? 'cursor-pointer' : ''} ${isDark ? 'border-white/20 bg-white/5' : 'border-gray-300 bg-white'} ${!isReadOnly && !previewUrl && !isGuest && (isDark ? 'hover:border-pairon-mint' : 'hover:border-pairon-indigo')}`}
               >
-                <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" disabled={isReadOnly} />
+                <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" disabled={isReadOnly || isGuest} />
+                
+                {/* Guest Block Overlay for Image */}
+                {isGuest && !previewUrl && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 p-4 text-center backdrop-blur-[1px]">
+                    <Lock size={24} className="text-white/70 mb-2" />
+                    <span className="text-xs text-white/80 font-medium">
+                      {language === 'it' ? 'Immagini disabilitate per Ospiti' : 'Images disabled for Guests'}
+                    </span>
+                  </div>
+                )}
+
                 {previewUrl ? (
                   <>
                     <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -731,8 +747,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 )}
               </div>
 
-              {/* Action Buttons (Only if Not Read Only) */}
-              {!isReadOnly && (
+              {/* Action Buttons (Only if Not Read Only AND Not Guest) */}
+              {!isReadOnly && !isGuest && (
                 <div className="flex flex-col gap-3 pt-2">
                    <button 
                      onClick={() => fileInputRef.current?.click()}

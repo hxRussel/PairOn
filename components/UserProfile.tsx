@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, updateUserProfile, setUserPremiumStatus, subscribeToUserSettings, UserSettings, uploadProfileImage, saveUserProfileImage, subscribeToUserProfileImage } from '../services/firebase';
 import { Loader } from './Loader';
-import { X, User, Camera, Crown, Check, X as XIcon, Shield, Code, AlertTriangle } from 'lucide-react';
+import { X, User, Camera, Crown, Check, X as XIcon, Shield, Code, AlertTriangle, Lock } from 'lucide-react';
 import { Language } from '../types';
 
 interface UserProfileProps {
@@ -11,9 +11,10 @@ interface UserProfileProps {
   onLogout: () => void;
   isDark: boolean;
   language: Language;
+  isGuest?: boolean;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, isDark, language }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, isDark, language, isGuest = false }) => {
   const user = auth.currentUser;
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user?.displayName || '');
@@ -83,6 +84,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       },
       uploadError: "Impossibile caricare l'immagine.",
       uploadGenericError: "Errore caricamento.",
+      guestNoPhoto: "Immagine bloccata per Ospiti"
     },
     en: {
       title: "User Profile",
@@ -111,6 +113,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       },
       uploadError: "Unable to upload image.",
       uploadGenericError: "Upload error.",
+      guestNoPhoto: "Image locked for Guests"
     }
   };
 
@@ -124,7 +127,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
       await updateUserProfile(newName);
       
       // 2. Update Image in Firestore if it's a Base64 string (new upload)
-      if (newPhotoURL && newPhotoURL.startsWith('data:image')) {
+      if (newPhotoURL && newPhotoURL.startsWith('data:image') && !isGuest) {
          await saveUserProfileImage(user.uid, newPhotoURL);
       }
 
@@ -138,7 +141,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
   };
 
   const handlePhotoClick = () => {
-    if (!isEditing) return;
+    if (!isEditing || isGuest) return;
     setUploadError(null);
     // Trigger file input click
     fileInputRef.current?.click();
@@ -146,7 +149,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user || isGuest) return;
 
     setIsUploading(true);
     setUploadError(null);
@@ -170,8 +173,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
     // Toggle logic for dev purposes
     await setUserPremiumStatus(user.uid, !userSettings.isPremium);
   };
-
-  const isGuest = user?.isAnonymous;
 
   const PlanFeature = ({ text, included }: { text: string, included: boolean }) => (
     <div className={`flex items-center gap-2 text-sm ${included ? (isDark ? 'text-white' : 'text-gray-800') : 'text-gray-400 line-through'}`}>
@@ -208,7 +209,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
             <div className="flex flex-col items-center gap-2">
               <div className="relative group">
                 <div 
-                  className={`w-24 h-24 rounded-full overflow-hidden border-4 ${isDark ? 'border-pairon-surface' : 'border-gray-100'} shadow-lg ${isEditing ? 'cursor-pointer' : ''} relative`}
+                  className={`w-24 h-24 rounded-full overflow-hidden border-4 ${isDark ? 'border-pairon-surface' : 'border-gray-100'} shadow-lg ${isEditing && !isGuest ? 'cursor-pointer' : ''} relative`}
                   onClick={handlePhotoClick}
                 >
                    {isUploading ? (
@@ -221,6 +222,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                      <div className={`w-full h-full flex items-center justify-center ${isDark ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
                        <User size={40} />
                      </div>
+                   )}
+
+                   {/* Guest Lock Overlay */}
+                   {isGuest && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <Lock size={24} className="text-white/70" />
+                      </div>
                    )}
                 </div>
                 {!isGuest && isEditing && !isUploading && (
@@ -239,6 +247,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                   <AlertTriangle size={12} />
                   <span>{uploadError}</span>
                 </div>
+              )}
+              
+              {/* Guest Warning Label */}
+              {isGuest && isEditing && (
+                 <span className="text-xs text-yellow-500 font-medium mt-1">{text.guestNoPhoto}</span>
               )}
             </div>
 
@@ -282,16 +295,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onLogout, is
                   </div>
                   <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email || text.guestAccess}</p>
                   
-                  {!isGuest && (
-                    <button 
-                      onClick={() => setIsEditing(true)}
-                      className={`text-xs font-medium px-3 py-1.5 rounded-full border ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-                    >
-                      {text.editProfile}
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-full border ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {text.editProfile}
+                  </button>
+
                   {isGuest && (
-                    <span className="text-xs px-3 py-1 bg-yellow-500/20 text-yellow-500 rounded-full">{text.guestMode}</span>
+                    <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-500 text-xs font-medium">
+                      <AlertTriangle size={10} />
+                      {text.guestMode}
+                    </div>
                   )}
                 </div>
               )}
