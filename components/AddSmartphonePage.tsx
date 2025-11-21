@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
@@ -54,19 +54,73 @@ const DEFAULT_DISPLAY_TYPES = [
 ];
 
 const DEFAULT_CAMERA_TYPES = [
-  "Principale (Wide)", 
-  "Grandangolare 120°", 
-  "Teleobiettivo 3x", 
-  "Teleobiettivo 5x (Periscopico)", 
-  "Macro", 
-  "Anteriore (Selfie)",
-  "Sensore Profondità"
+  "Principale",
+  "Grandangolare",
+  "Teleobiettivo 3x",
+  "Teleobiettivo 5x",
+  "Macro",
+  "Anteriore"
 ];
 
 const DEFAULT_UI_VERSIONS = [
   "One UI 6.1", "One UI 6.0", "iOS 17", "iOS 18", "HyperOS", "OxygenOS 14", 
   "ColorOS 14", "OriginOS 4", "MagicOS 8.0", "Pixel UI", "Nothing OS 2.5"
 ];
+
+const DEFAULT_IP_RATINGS = [
+  "IP68", "IP67", "IP54", "IP53", "IPX4"
+];
+
+// --- INTERNAL COMPONENT: Unit Selector (Modal) ---
+const UnitSelector: React.FC<{
+  value: string;
+  onChange: (val: string) => void;
+  isReadOnly: boolean;
+  isDark: boolean;
+}> = ({ value, onChange, isReadOnly, isDark }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const options = ['GB', 'TB'];
+
+  const inputBg = isReadOnly 
+    ? (isDark ? 'bg-transparent border-b border-white/20 text-white' : 'bg-transparent border-b border-gray-300 text-gray-900')
+    : (isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900');
+
+  return (
+    <>
+      <div
+        onClick={() => !isReadOnly && setIsOpen(true)}
+        className={`w-full p-3 rounded-xl border text-center min-h-[46px] flex items-center justify-center ${inputBg} ${!isReadOnly ? 'cursor-pointer hover:border-pairon-mint/50 transition-colors' : ''}`}
+      >
+        <span className="font-medium text-sm">{value}</span>
+      </div>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+           <div className={`w-full max-w-xs rounded-2xl shadow-2xl overflow-hidden ${isDark ? 'bg-pairon-surface border border-white/10' : 'bg-white border border-gray-200'}`}>
+              <div className={`p-4 border-b flex justify-between items-center ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Unità</h3>
+                <button onClick={() => setIsOpen(false)} className={`p-2 rounded-full ${isDark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+                   <X size={20} />
+                </button>
+              </div>
+              <div className="p-2 flex flex-col gap-1">
+                {options.map(opt => (
+                   <button
+                     key={opt}
+                     onClick={() => { onChange(opt); setIsOpen(false); }}
+                     className={`w-full p-3 rounded-xl text-center font-bold transition-colors flex justify-between items-center px-6 ${value === opt ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'text-white hover:bg-white/5' : 'text-gray-900 hover:bg-gray-50')}`}
+                   >
+                     <span>{opt}</span>
+                     {value === opt && <Check size={16} />}
+                   </button>
+                ))}
+              </div>
+           </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({ 
   onClose, 
@@ -102,7 +156,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [rams, setRams] = useState<RamVariant[]>([{ amount: '', type: '' }]);
   
   // Dynamic Storage
-  const [storages, setStorages] = useState<StorageVariant[]>([{ amount: '', type: '' }]);
+  const [storages, setStorages] = useState<StorageVariant[]>([{ amount: '', unit: 'GB', type: '' }]);
 
   // Dynamic Displays
   const [displays, setDisplays] = useState<Display[]>([{ 
@@ -155,6 +209,12 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const [launchDate, setLaunchDate] = useState('');
   const [price, setPrice] = useState('');
 
+  // Pros & Cons
+  const [pros, setPros] = useState<string[]>([]);
+  const [cons, setCons] = useState<string[]>([]);
+  const [newPro, setNewPro] = useState('');
+  const [newCon, setNewCon] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Colors helper
@@ -183,15 +243,32 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       setChip(initialData.chip);
       setIpRating(initialData.ipRating);
       if (initialData.ram && initialData.ram.length > 0) setRams(initialData.ram);
-      if (initialData.storage && initialData.storage.length > 0) setStorages(initialData.storage);
+      
+      // Storage Load with legacy support
+      if (initialData.storage && initialData.storage.length > 0) {
+        const parsedStorage = initialData.storage.map(s => {
+           // Handle legacy data where unit might be in amount or missing
+           if (!s.unit) {
+             const match = s.amount.match(/^(\d+)\s*(GB|TB)?$/i);
+             if (match) {
+               return {
+                 ...s,
+                 amount: match[1],
+                 unit: (match[2]?.toUpperCase() as 'GB' | 'TB') || 'GB'
+               };
+             }
+             return { ...s, unit: 'GB' as 'GB' | 'TB' };
+           }
+           return s;
+        });
+        setStorages(parsedStorage);
+      }
       
       // Battery Load
       if (initialData.battery) {
         if (typeof initialData.battery === 'object') {
-          // CLEANUP: Remove "Unknown" if present
           const cap = initialData.battery.capacity === 'Unknown' ? '' : initialData.battery.capacity;
           setBatteryCapacity(cap);
-          
           setIsSiliconCarbon(initialData.battery.isSiliconCarbon);
           setWiredCharging(initialData.battery.wiredCharging);
           setHasWireless(initialData.battery.hasWireless);
@@ -240,6 +317,10 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       // Availability
       setLaunchDate(initialData.launchDate || '');
       setPrice(initialData.price || '');
+
+      // Pros & Cons
+      setPros(initialData.pros || []);
+      setCons(initialData.cons || []);
     }
   }, [initialData]);
 
@@ -273,7 +354,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
   const handleAddStorage = () => {
     if (isReadOnly) return;
-    setStorages([...storages, { amount: '', type: '' }]);
+    setStorages([...storages, { amount: '', unit: 'GB', type: '' }]);
   };
 
   const handleRemoveStorage = (index: number) => {
@@ -286,6 +367,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const updateStorage = (index: number, field: keyof StorageVariant, value: string) => {
     if (isReadOnly) return;
     const newStorages = [...storages];
+    // @ts-ignore
     newStorages[index][field] = value;
     setStorages(newStorages);
   };
@@ -343,6 +425,33 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   const updateVideo = (field: keyof VideoSettings, value: any) => {
     if (isReadOnly) return;
     setVideoSettings({ ...videoSettings, [field]: value });
+  };
+
+  // --- PROS & CONS HANDLERS ---
+  const handleAddPro = () => {
+    if (newPro.trim()) {
+      setPros([...pros, newPro.trim()]);
+      setNewPro('');
+    }
+  };
+
+  const handleRemovePro = (index: number) => {
+    if (!isReadOnly) {
+      setPros(pros.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleAddCon = () => {
+    if (newCon.trim()) {
+      setCons([...cons, newCon.trim()]);
+      setNewCon('');
+    }
+  };
+
+  const handleRemoveCon = (index: number) => {
+    if (!isReadOnly) {
+      setCons(cons.filter((_, i) => i !== index));
+    }
   };
 
   const generateRandomGradient = () => {
@@ -420,6 +529,10 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       securityPatches,
       launchDate,
       price,
+      
+      // Pros & Cons
+      pros,
+      cons,
 
       // If creating new, random color. If editing, keep existing.
       color: initialData?.color || generateRandomGradient(),
@@ -617,7 +730,12 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             </div>
             
             <div className="space-y-4">
-              {displays.map((display, index) => (
+              {displays.map((display, index) => {
+                // Split resolution string into width/height for inputs
+                // Expected format: "1440 x 3120" or "1440 x 3120 pixel"
+                const [width = '', height = ''] = display.resolution.toLowerCase().replace('pixel', '').split('x').map(s => s.trim());
+
+                return (
                 <div key={index} className={`p-5 rounded-2xl border relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
                    {!isReadOnly && displays.length > 1 && (
                       <button 
@@ -649,35 +767,46 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       
                       <div>
                         <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Dimensioni' : 'Size'}
+                          {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}
                         </label>
                         <input
                           type="text"
                           value={display.size}
                           onChange={(e) => updateDisplay(index, 'size', e.target.value)}
                           disabled={isReadOnly}
-                          placeholder={language === 'it' ? 'es. 6.7 pollici' : 'e.g. 6.7 inches'}
+                          placeholder={language === 'it' ? 'es. 6.7' : 'e.g. 6.7'}
                           className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                         />
                       </div>
 
-                      <div>
+                      <div className="col-span-1 md:col-span-2">
                         <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Risoluzione' : 'Resolution'}
+                          {language === 'it' ? 'Risoluzione (pixel)' : 'Resolution (pixel)'}
                         </label>
-                        <input
-                          type="text"
-                          value={display.resolution}
-                          onChange={(e) => updateDisplay(index, 'resolution', e.target.value)}
-                          disabled={isReadOnly}
-                          placeholder={language === 'it' ? 'es. 1440 x 3120 pixel' : 'e.g. 1440 x 3120 pixels'}
-                          className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
-                        />
+                        <div className="flex items-center gap-2">
+                           <input
+                              type="text"
+                              value={width}
+                              onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)}
+                              disabled={isReadOnly}
+                              placeholder={language === 'it' ? 'Orizzontale' : 'Horizontal'}
+                              className={`flex-1 p-3 rounded-xl border outline-none text-center ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
+                            />
+                            <span className={`font-bold ${isDark ? 'text-white/50' : 'text-black/50'}`}>X</span>
+                            <input
+                              type="text"
+                              value={height}
+                              onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)}
+                              disabled={isReadOnly}
+                              placeholder={language === 'it' ? 'Verticale' : 'Vertical'}
+                              className={`flex-1 p-3 rounded-xl border outline-none text-center ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
+                            />
+                        </div>
                       </div>
 
                       <div>
                          <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          Refresh Rate
+                          Refresh Rate (Hz)
                         </label>
                         <div className="relative">
                           <Zap size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
@@ -686,7 +815,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                             value={display.refreshRate}
                             onChange={(e) => updateDisplay(index, 'refreshRate', e.target.value)}
                             disabled={isReadOnly}
-                            placeholder="es. 120Hz"
+                            placeholder="es. 120"
                             className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                           />
                         </div>
@@ -694,7 +823,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
                       <div>
                          <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                          {language === 'it' ? 'Luminosità Picco' : 'Peak Brightness'}
+                          {language === 'it' ? 'Luminosità Picco (nits)' : 'Peak Brightness (nits)'}
                         </label>
                         <div className="relative">
                           <Sun size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
@@ -703,7 +832,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                             value={display.brightness}
                             onChange={(e) => updateDisplay(index, 'brightness', e.target.value)}
                             disabled={isReadOnly}
-                            placeholder="es. 2600 nits"
+                            placeholder="es. 2600"
                             className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                           />
                         </div>
@@ -728,7 +857,8 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       </div>
                    </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </section>
 
@@ -776,7 +906,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                           defaultOptions={DEFAULT_CAMERA_TYPES}
                           isReadOnly={isReadOnly}
                           isDark={isDark}
-                          placeholder={language === 'it' ? 'es. Principale (Wide)' : 'e.g. Main (Wide)'}
+                          placeholder={language === 'it' ? 'Principale/ Wide 120°, Zoom 3.5x, Anteriore...' : 'Main/ Wide 120°, Zoom 3.5x, Selfie...'}
                           language={language}
                         />
                      </div>
@@ -791,7 +921,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                             value={cam.megapixels}
                             onChange={(e) => updateCamera(index, 'megapixels', e.target.value)}
                             disabled={isReadOnly}
-                            placeholder="es. 200MP"
+                            placeholder="200"
                             className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                           />
                        </div>
@@ -839,14 +969,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                   </div>
                   <div>
                     <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                      {language === 'it' ? 'Frame Rate Max' : 'Max Frame Rate'}
+                      {language === 'it' ? 'Frame Rate Max (FPS)' : 'Max Frame Rate (FPS)'}
                     </label>
                     <input
                       type="text"
                       value={videoSettings.maxFrameRate}
                       onChange={(e) => updateVideo('maxFrameRate', e.target.value)}
                       disabled={isReadOnly}
-                      placeholder="es. 120fps"
+                      placeholder="120"
                       className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                     />
                   </div>
@@ -896,16 +1026,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
               />
               
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                  {language === 'it' ? 'Certificazione IP' : 'IP Rating'}
-                </label>
-                <input
-                  type="text"
+                <SmartSelector 
+                  label={language === 'it' ? 'Certificazione IP' : 'IP Rating'}
                   value={ipRating}
-                  onChange={(e) => setIpRating(e.target.value)}
-                  disabled={isReadOnly}
-                  placeholder={isReadOnly ? '-' : "es. IP68"}
-                  className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
+                  onChange={setIpRating}
+                  optionsCategory="ipRatings"
+                  defaultOptions={DEFAULT_IP_RATINGS}
+                  isReadOnly={isReadOnly}
+                  isDark={isDark}
+                  placeholder={language === 'it' ? 'es. IP68' : 'e.g. IP68'}
+                  language={language}
                 />
               </div>
             </div>
@@ -914,7 +1044,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
               <div className="flex justify-between items-center mb-3">
                 <label className={`text-xs font-bold uppercase tracking-wider ${labelColor}`}>
-                  {language === 'it' ? 'Varianti RAM' : 'RAM Variants'}
+                  {language === 'it' ? 'Varianti RAM (GB)' : 'RAM Variants (GB)'}
                 </label>
                 {!isReadOnly && (
                   <button onClick={handleAddRam} className="text-pairon-mint hover:text-white transition-colors">
@@ -931,7 +1061,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         value={ram.amount}
                         onChange={(e) => updateRam(index, 'amount', e.target.value)}
                         disabled={isReadOnly}
-                        placeholder="GB"
+                        placeholder="12"
                         className={`w-full p-3 rounded-xl text-sm border outline-none ${inputBg}`}
                       />
                     </div>
@@ -979,8 +1109,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                         value={storage.amount}
                         onChange={(e) => updateStorage(index, 'amount', e.target.value)}
                         disabled={isReadOnly}
-                        placeholder="GB/TB"
+                        placeholder="256"
                         className={`w-full p-3 rounded-xl text-sm border outline-none ${inputBg}`}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <UnitSelector 
+                         value={storage.unit}
+                         onChange={(val) => updateStorage(index, 'unit', val)}
+                         isReadOnly={isReadOnly}
+                         isDark={isDark}
                       />
                     </div>
                     <div className="flex-1">
@@ -1023,14 +1161,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
               <div className="flex gap-3 items-end">
                  <div className="w-1/3">
                     <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                      {language === 'it' ? 'Capacità' : 'Capacity'}
+                      {language === 'it' ? 'Capacità (mAh)' : 'Capacity (mAh)'}
                     </label>
                     <input
                       type="text"
                       value={batteryCapacity}
                       onChange={(e) => setBatteryCapacity(e.target.value)}
                       disabled={isReadOnly}
-                      placeholder="es. 5000 mAh"
+                      placeholder="es. 5000"
                       className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                     />
                  </div>
@@ -1046,7 +1184,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
               {/* Wired Charging */}
               <div>
                 <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                   {language === 'it' ? 'Ricarica Cablata' : 'Wired Charging'}
+                   {language === 'it' ? 'Ricarica Cablata (W)' : 'Wired Charging (W)'}
                 </label>
                 <div className="relative">
                    <Zap size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} />
@@ -1055,7 +1193,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                     value={wiredCharging}
                     onChange={(e) => setWiredCharging(e.target.value)}
                     disabled={isReadOnly}
-                    placeholder="es. 80W"
+                    placeholder="es. 80"
                     className={`w-full p-3 pl-9 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                   />
                 </div>
@@ -1086,7 +1224,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       value={wirelessCharging}
                       onChange={(e) => setWirelessCharging(e.target.value)}
                       disabled={isReadOnly}
-                      placeholder={language === 'it' ? 'Velocità (es. 50W)' : 'Speed (e.g. 50W)'}
+                      placeholder={language === 'it' ? 'Velocità (W) es. 50' : 'Speed (W) e.g. 50'}
                       className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
                     />
                  </div>
@@ -1117,7 +1255,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                       value={reverseCharging}
                       onChange={(e) => setReverseCharging(e.target.value)}
                       disabled={isReadOnly}
-                      placeholder={language === 'it' ? 'Velocità (es. 10W)' : 'Speed (e.g. 10W)'}
+                      placeholder={language === 'it' ? 'Velocità (W) es. 10' : 'Speed (W) e.g. 10'}
                       className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg}`}
                     />
                  </div>
@@ -1171,7 +1309,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
               </div>
             </div>
 
-            {/* Fingerprint Section - FIXED */}
+            {/* Fingerprint Section */}
             <div className={`p-4 rounded-xl border transition-all ${hasFingerprint ? 'border-pairon-mint/50 bg-pairon-mint/5' : (isDark ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50')}`}>
                <div 
                  onClick={() => !isReadOnly && setHasFingerprint(!hasFingerprint)}
@@ -1326,20 +1464,20 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                     value={majorUpdates}
                     onChange={(e) => setMajorUpdates(e.target.value)}
                     disabled={isReadOnly}
-                    placeholder={language === 'it' ? 'es. 7 Anni' : 'e.g. 7 Years'}
+                    placeholder="es. 7"
                     className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                   />
                 </div>
                 <div>
                   <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${labelColor}`}>
-                    {language === 'it' ? 'Patch Sicurezza Promesse' : 'Security Patches Promised'}
+                    {language === 'it' ? 'Patch Sicurezza Promesse (Anni)' : 'Security Patches Promised (Years)'}
                   </label>
                   <input
                     type="text"
                     value={securityPatches}
                     onChange={(e) => setSecurityPatches(e.target.value)}
                     disabled={isReadOnly}
-                    placeholder={language === 'it' ? 'es. 7 Anni' : 'e.g. 7 Years'}
+                    placeholder="es. 7"
                     className={`w-full p-3 rounded-xl border outline-none ${!isReadOnly && 'focus:ring-1 focus:ring-pairon-mint'} ${inputBg} ${isReadOnly ? 'border-transparent' : ''}`}
                   />
                 </div>
@@ -1389,6 +1527,105 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                   </div>
                 </div>
              </div>
+          </section>
+
+          <hr className={`border-t ${isDark ? 'border-white/5' : 'border-gray-200'}`} />
+
+          {/* SECTION 9: PROS & CONS */}
+          <section className="space-y-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* PROS */}
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                    <ThumbsUp size={16} />
+                  </div>
+                  <h3 className={`font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>Pro</h3>
+                </div>
+                
+                {!isReadOnly && (
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newPro}
+                      onChange={(e) => setNewPro(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddPro()}
+                      placeholder={language === 'it' ? 'Aggiungi un pregio...' : 'Add a pro...'}
+                      className={`flex-1 p-2 rounded-lg text-sm outline-none border border-transparent focus:border-green-500/50 bg-transparent ${isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+                    />
+                    <button onClick={handleAddPro} className="p-2 rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20">
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {pros.length === 0 && (
+                    <div className={`text-xs italic ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                      {language === 'it' ? 'Nessun pro aggiunto.' : 'No pros added.'}
+                    </div>
+                  )}
+                  {pros.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-2 group">
+                      <Check size={14} className="text-green-500 mt-1 shrink-0" />
+                      <span className={`text-sm flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item}</span>
+                      {!isReadOnly && (
+                        <button onClick={() => handleRemovePro(idx)} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CONS */}
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
+                    <ThumbsDown size={16} />
+                  </div>
+                  <h3 className={`font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>Contro</h3>
+                </div>
+                
+                {!isReadOnly && (
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newCon}
+                      onChange={(e) => setNewCon(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCon()}
+                      placeholder={language === 'it' ? 'Aggiungi un difetto...' : 'Add a con...'}
+                      className={`flex-1 p-2 rounded-lg text-sm outline-none border border-transparent focus:border-red-500/50 bg-transparent ${isDark ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+                    />
+                    <button onClick={handleAddCon} className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20">
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {cons.length === 0 && (
+                    <div className={`text-xs italic ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                      {language === 'it' ? 'Nessun contro aggiunto.' : 'No cons added.'}
+                    </div>
+                  )}
+                  {cons.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-2 group">
+                      <X size={14} className="text-red-500 mt-1 shrink-0" />
+                      <span className={`text-sm flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item}</span>
+                      {!isReadOnly && (
+                        <button onClick={() => handleRemoveCon(idx)} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
           </section>
 
         </div>

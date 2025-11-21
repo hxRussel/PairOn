@@ -117,6 +117,7 @@ export interface RamVariant {
 
 export interface StorageVariant {
   amount: string;
+  unit: 'GB' | 'TB'; 
   type: string;
 }
 
@@ -199,6 +200,10 @@ export interface PhoneData {
   // Availability
   launchDate: string;
   price: string;
+
+  // Pros & Cons
+  pros?: string[];
+  cons?: string[];
 }
 
 export interface UserSettings {
@@ -216,7 +221,8 @@ export interface CustomOptions {
   faceIdTypes: string[];
   displayTypes: string[];
   cameraTypes: string[];
-  uiVersions: string[]; // New
+  uiVersions: string[]; 
+  ipRatings: string[]; // New
 }
 
 // Subscribe to the current user's smartphone collection
@@ -301,7 +307,8 @@ export const subscribeToCustomOptions = (userId: string, callback: (options: Cus
         faceIdTypes: [],
         displayTypes: [],
         cameraTypes: [],
-        uiVersions: []
+        uiVersions: [],
+        ipRatings: []
       });
     }
   });
