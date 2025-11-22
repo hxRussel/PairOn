@@ -21,6 +21,24 @@ interface DashboardProps {
 // --- CONSTANTS ---
 const FREE_PLAN_LIMIT = 10;
 
+const GRADIENTS = [
+  'from-rose-500 to-orange-500',
+  'from-purple-600 to-blue-600',
+  'from-emerald-500 to-teal-900',
+  'from-amber-500 to-orange-700',
+  'from-pink-500 to-rose-900',
+  'from-cyan-500 to-blue-700',
+  'from-fuchsia-600 to-purple-800',
+  'from-indigo-500 to-purple-900',
+  'from-violet-600 to-indigo-600',
+  'from-blue-600 to-cyan-500',
+  'from-teal-500 to-emerald-600',
+  'from-red-600 to-rose-800',
+  'from-blue-500 to-indigo-500'
+];
+
+const DEFAULT_BLUE = 'from-blue-600 to-indigo-900';
+
 // --- CUSTOM ICONS ---
 const AiIcon = ({ size = 24, strokeWidth = 2, style, className, ...props }: any) => (
   <svg
@@ -492,6 +510,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     securityPatches: { it: 'Sicurezza', en: 'Security Patches' },
   };
 
+  // HELPER: Get consistent color for retroactive change
+  const getPhoneColor = (phone: PhoneData) => {
+    if (phone.color && phone.color !== DEFAULT_BLUE) return phone.color;
+    
+    // Deterministic random color based on ID or Model
+    const seed = phone.id || phone.model;
+    
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
+  };
+
   // HELPER: Generic Phone Sorter and Filter
   const getProcessedPhones = (sourceList: PhoneData[]) => {
      // 1. Filter
@@ -849,7 +881,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         className={`snap-center shrink-0 w-[280px] rounded-3xl border overflow-hidden flex flex-col transition-all hover:scale-[1.01] cursor-pointer ${isDark ? 'bg-pairon-surface border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
                       >
                          {/* Card Header */}
-                         <div className={`h-40 relative bg-gradient-to-br ${phone.color} p-4 flex flex-col justify-end`}>
+                         <div className={`h-40 relative bg-gradient-to-br ${getPhoneColor(phone)} p-4 flex flex-col justify-end`}>
                             {phone.imageUrl && (
                               <img src={phone.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-50" />
                             )}
@@ -974,7 +1006,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                           </div>
 
                           {/* Thumbnail */}
-                          <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${phone.color}`}>
+                          <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${getPhoneColor(phone)}`}>
                              {phone.imageUrl ? (
                                <img src={phone.imageUrl} alt="" className="w-full h-full object-cover" />
                              ) : (
@@ -1085,7 +1117,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
                        <div className={`flex items-center gap-4 ${isLocked ? 'opacity-40' : ''}`}>
                           {/* Thumbnail */}
-                          <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${phone.color}`}>
+                          <div className={`w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br ${getPhoneColor(phone)}`}>
                              {phone.imageUrl ? (
                                <img src={phone.imageUrl} alt="" className="w-full h-full object-cover" />
                              ) : (
@@ -1181,7 +1213,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 className="snap-start shrink-0 w-72 h-[26rem] relative rounded-[2rem] overflow-hidden transition-all duration-300 transform hover:-translate-y-2 group cursor-pointer shadow-xl"
               >
                 {/* Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${phone.color} opacity-90`}>
+                <div className={`absolute inset-0 bg-gradient-to-br ${getPhoneColor(phone)} opacity-90`}>
                   {phone.imageUrl && (
                     <img src={phone.imageUrl} alt={phone.model} className="w-full h-full object-cover mix-blend-overlay opacity-50" />
                   )}

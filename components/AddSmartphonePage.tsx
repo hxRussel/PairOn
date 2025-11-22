@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick, CheckCircle2, Droplets } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, Trash2, Save, Check, Cpu, HardDrive, Smartphone, Volume2, Fingerprint, Activity, Eye, AlertTriangle, X, Monitor, Zap, Sun, Aperture, Video, ScanFace, BatteryMedium, RefreshCcw, Wifi, AppWindow, Layers, Calendar, Euro, DollarSign, PoundSterling, JapaneseYen, IndianRupee, Banknote, ThumbsUp, ThumbsDown, RefreshCw, Maximize2, Lock, ShieldCheck, SmartphoneNfc,  CalendarDays, Palette, MousePointerClick, CheckCircle2, Droplets, ChevronDown } from 'lucide-react';
 import { Language } from '../types';
 import { PhoneData, RamVariant, StorageVariant, Display, Camera as CameraType, VideoSettings, Battery, addSmartphone, updateSmartphone, uploadSmartphoneImage, auth, subscribeToUserSettings } from '../services/firebase';
 import { Loader } from './Loader';
@@ -127,6 +127,49 @@ const UnitSelector: React.FC<{
         </div>
       )}
     </>
+  );
+};
+
+// --- INTERNAL COMPONENT: Collapsible Section ---
+const CollapsibleSection: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+  action?: React.ReactNode;
+  isDark: boolean;
+}> = ({ icon, title, children, action, isDark }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <section className="space-y-6">
+      <div 
+        className={`flex justify-between items-center cursor-pointer select-none py-2 rounded-xl transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100/50'} -mx-2 px-2`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-3">
+           <div className={`${isDark ? 'bg-white/5' : 'bg-gray-100'} p-2 rounded-lg`}>
+             {icon}
+           </div>
+           <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
+        </div>
+        <div className="flex items-center gap-3">
+           {action && (
+             <div onClick={(e) => e.stopPropagation()}>
+               {action}
+             </div>
+           )}
+           <div className={`p-2 rounded-full transition-all duration-300 ${isOpen ? 'rotate-180 bg-pairon-mint/10 text-pairon-mint' : (isDark ? 'text-gray-500 hover:bg-white/10' : 'text-gray-400 hover:bg-gray-100')}`}>
+             <ChevronDown size={20} />
+           </div>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="space-y-6 animate-fade-in">
+          {children}
+        </div>
+      )}
+    </section>
   );
 };
 
@@ -344,7 +387,17 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
   };
   const handleRemoveCon = (index: number) => !isReadOnly && setCons(cons.filter((_, i) => i !== index));
 
-  const generateRandomGradient = () => 'from-blue-600 to-indigo-900';
+  const generateRandomGradient = () => {
+    const gradients = [
+      'from-rose-500 to-orange-500', 'from-purple-600 to-blue-600',
+      'from-emerald-500 to-teal-900', 'from-amber-500 to-orange-700',
+      'from-pink-500 to-rose-900', 'from-cyan-500 to-blue-700',
+      'from-fuchsia-600 to-purple-800', 'from-indigo-500 to-purple-900',
+      'from-violet-600 to-indigo-600', 'from-teal-500 to-emerald-600',
+      'from-orange-500 to-red-500', 'from-blue-500 to-indigo-500'
+    ];
+    return gradients[Math.floor(Math.random() * gradients.length)];
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -465,88 +518,104 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
           </div>
 
           {/* Display Section */}
-          <section className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2"><Monitor className="text-blue-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Display</h3></div>
-              {!isReadOnly && <button onClick={handleAddDisplay} className="text-xs font-bold text-pairon-mint flex items-center gap-1"><Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}</button>}
-            </div>
+          <CollapsibleSection 
+            icon={<Monitor className="text-blue-400" size={20} />}
+            title="Display"
+            isDark={isDark}
+            action={!isReadOnly ? (
+               <button onClick={handleAddDisplay} className="text-xs font-bold text-pairon-mint flex items-center gap-1 p-2 hover:bg-pairon-mint/10 rounded-lg transition-colors">
+                 <Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}
+               </button>
+            ) : undefined}
+          >
             {displays.map((display, index) => {
                 const [width = '', height = ''] = display.resolution.toLowerCase().replace('pixel', '').split('x').map(s => s.trim());
                 return (
-                <div key={index} className={`p-5 rounded-2xl border relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                   <div className="flex justify-between items-center mb-4 border-b border-gray-500/10 pb-2">
-                       <span className={`font-bold text-sm uppercase tracking-wider ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Display {index + 1}</span>
-                       {!isReadOnly && displays.length > 1 && <button onClick={() => handleRemoveDisplay(index)} className="text-red-400 hover:text-red-500"><Trash2 size={16} /></button>}
+                <div key={index} className={`rounded-2xl border overflow-hidden ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                   {/* Improved Header with Net Separation */}
+                   <div className={`px-4 py-3 flex justify-between items-center border-b ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-200/50 border-gray-200'}`}>
+                       <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                           Display {index + 1}
+                       </span>
+                       {!isReadOnly && displays.length > 1 && (
+                         <button onClick={() => handleRemoveDisplay(index)} className="text-red-400 hover:text-red-500 p-1.5 hover:bg-red-500/10 rounded-full transition-colors">
+                           <Trash2 size={16} />
+                         </button>
+                       )}
                    </div>
                    
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <SmartSelector label={language === 'it' ? 'Tecnologia' : 'Technology'} value={display.type} onChange={(val) => updateDisplay(index, 'type', val)} optionsCategory="displayTypes" defaultOptions={DEFAULT_DISPLAY_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
-                      
-                      <div>
-                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-blue-400`}><Maximize2 size={12} /> {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}</label>
-                         <input type="text" value={display.size} onChange={(e) => updateDisplay(index, 'size', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder='6.7"' />
-                      </div>
-                      
-                      {/* Resolution Split Inputs */}
-                      <div className="col-span-1 md:col-span-2">
-                        <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 mb-3`}>
-                            <Monitor size={12} /> {language === 'it' ? 'Risoluzione (Pixel)' : 'Resolution (Pixel)'}
-                        </label>
-                        <div className="flex items-end gap-4">
-                           <div className="flex-1">
-                             <label className={`block text-[10px] font-bold text-center mb-1.5 opacity-70 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                                {language === 'it' ? 'Orizzontale' : 'Horizontal'}
-                             </label>
-                             <input 
-                                type="text" 
-                                value={width} 
-                                onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)} 
-                                disabled={isReadOnly} 
-                                className={`w-full p-3 rounded-xl border outline-none text-center ${inputBg}`} 
-                                placeholder="1080" 
-                             />
-                           </div>
-                           <div className={`pb-3 font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>X</div>
-                           <div className="flex-1">
-                             <label className={`block text-[10px] font-bold text-center mb-1.5 opacity-70 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                                {language === 'it' ? 'Verticale' : 'Vertical'}
-                             </label>
-                             <input 
-                                type="text" 
-                                value={height} 
-                                onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)} 
-                                disabled={isReadOnly} 
-                                className={`w-full p-3 rounded-xl border outline-none text-center ${inputBg}`} 
-                                placeholder="2400" 
-                             />
-                           </div>
+                   <div className="p-5">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <SmartSelector label={language === 'it' ? 'Tecnologia' : 'Technology'} value={display.type} onChange={(val) => updateDisplay(index, 'type', val)} optionsCategory="displayTypes" defaultOptions={DEFAULT_DISPLAY_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                        
+                        <div>
+                           <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-blue-400`}><Maximize2 size={12} /> {language === 'it' ? 'Dimensioni (pollici)' : 'Size (inches)'}</label>
+                           <input type="text" value={display.size} onChange={(e) => updateDisplay(index, 'size', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder='6.7"' />
                         </div>
-                      </div>
-                      
-                      <div>
-                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><RefreshCw size={12} /> Refresh Rate (Hz)</label>
-                         <input type="text" value={display.refreshRate} onChange={(e) => updateDisplay(index, 'refreshRate', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="120 Hz" />
-                      </div>
-                      
-                      <div>
-                         <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-yellow-500`}><Sun size={12} /> {language === 'it' ? 'Luminosità (Nits)' : 'Brightness (Nits)'}</label>
-                         <input type="text" value={display.brightness} onChange={(e) => updateDisplay(index, 'brightness', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="2000 nits" />
-                      </div>
-                   </div>
-                   
-                   {/* HDR & Dolby Vision Toggles */}
-                   <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
-                      <button type="button" onClick={() => !isReadOnly && updateDisplay(index, 'hasHdr', !display.hasHdr)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${display.hasHdr ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-300 text-gray-500 hover:bg-gray-100')}`}>HDR</button>
-                      <button type="button" onClick={() => !isReadOnly && updateDisplay(index, 'hasDolbyVision', !display.hasDolbyVision)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${display.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-300 text-gray-500 hover:bg-gray-100')}`}>Dolby Vision</button>
+                        
+                        {/* Resolution Split Inputs with Clear Labels */}
+                        <div className="col-span-1 md:col-span-2">
+                          <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 mb-3`}>
+                              <Monitor size={12} /> {language === 'it' ? 'Risoluzione (Pixel)' : 'Resolution (Pixel)'}
+                          </label>
+                          <div className="flex items-end gap-4">
+                             <div className="flex-1">
+                               <label className={`block text-[10px] font-bold text-center mb-1.5 uppercase tracking-wider opacity-80 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                                  {language === 'it' ? 'Orizzontale (Larghezza)' : 'Horizontal (Width)'}
+                               </label>
+                               <input 
+                                  type="text" 
+                                  value={width} 
+                                  onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)} 
+                                  disabled={isReadOnly} 
+                                  className={`w-full p-3 rounded-xl border outline-none text-center ${inputBg}`} 
+                                  placeholder="1080" 
+                               />
+                             </div>
+                             <div className={`pb-3 font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>X</div>
+                             <div className="flex-1">
+                               <label className={`block text-xs font-bold text-center mb-1.5 uppercase tracking-wider opacity-80 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                                  {language === 'it' ? 'Verticale (Altezza)' : 'Vertical (Height)'}
+                               </label>
+                               <input 
+                                  type="text" 
+                                  value={height} 
+                                  onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)} 
+                                  disabled={isReadOnly} 
+                                  className={`w-full p-3 rounded-xl border outline-none text-center ${inputBg}`} 
+                                  placeholder="2400" 
+                               />
+                             </div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                           <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><RefreshCw size={12} /> Refresh Rate (Hz)</label>
+                           <input type="text" value={display.refreshRate} onChange={(e) => updateDisplay(index, 'refreshRate', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="120 Hz" />
+                        </div>
+                        
+                        <div>
+                           <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 text-yellow-500`}><Sun size={12} /> {language === 'it' ? 'Luminosità (Nits)' : 'Brightness (Nits)'}</label>
+                           <input type="text" value={display.brightness} onChange={(e) => updateDisplay(index, 'brightness', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="2000 nits" />
+                        </div>
+                     </div>
+                     
+                     {/* HDR & Dolby Vision Toggles */}
+                     <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
+                        <button type="button" onClick={() => !isReadOnly && updateDisplay(index, 'hasHdr', !display.hasHdr)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${display.hasHdr ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-300 text-gray-500 hover:bg-gray-100')}`}>HDR</button>
+                        <button type="button" onClick={() => !isReadOnly && updateDisplay(index, 'hasDolbyVision', !display.hasDolbyVision)} className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${display.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-300 text-gray-500 hover:bg-gray-100')}`}>Dolby Vision</button>
+                     </div>
                    </div>
                 </div>
               )})}
-          </section>
+          </CollapsibleSection>
 
           {/* Hardware Section */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-2"><Cpu className="text-indigo-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hardware</h3></div>
-            
+          <CollapsibleSection
+            icon={<Cpu className="text-indigo-400" size={20} />}
+            title="Hardware"
+            isDark={isDark}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SmartSelector label={language === 'it' ? 'SoC / Processore' : 'SoC / Processor'} value={chip} onChange={setChip} optionsCategory="chips" defaultOptions={DEFAULT_CHIPS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
               <SmartSelector label={language === 'it' ? 'Certificazione IP (Acqua/Polvere)' : 'IP Rating (Water/Dust)'} value={ipRating} onChange={setIpRating} optionsCategory="ipRatings" defaultOptions={DEFAULT_IP_RATINGS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
@@ -602,14 +671,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className="space-y-3">
               <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor}`}>RAM</label>{!isReadOnly && <button onClick={handleAddRam} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
               {rams.map((ram, index) => (
-                <div key={index} className={`flex flex-col gap-2 rounded-xl ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'} p-4 border`}>
-                  <div className="flex justify-between items-center border-b border-gray-500/10 pb-2 mb-2">
-                      <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div key={index} className={`rounded-xl overflow-hidden border ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'}`}>
+                  {/* Header */}
+                  <div className={`px-4 py-2 flex justify-between items-center border-b ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-200/50 border-gray-200'}`}>
+                      <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-800'}`}>
                           {language === 'it' ? `Variante ${index + 1}` : `Variant ${index + 1}`}
                       </span>
-                      {!isReadOnly && rams.length > 1 && <button onClick={() => handleRemoveRam(index)} className="text-red-400 hover:text-red-500"><Trash2 size={14} /></button>}
+                      {!isReadOnly && rams.length > 1 && <button onClick={() => handleRemoveRam(index)} className="text-red-400 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10"><Trash2 size={14} /></button>}
                   </div>
-                  <div className="flex flex-col md:flex-row gap-3">
+                  
+                  <div className="p-4 flex flex-col md:flex-row gap-3">
                     <div className="relative flex-1">
                         <input type="text" value={ram.amount} onChange={(e) => updateRam(index, 'amount', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none pl-4 ${inputBg}`} placeholder="12" />
                         <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold ${labelColor}`}>GB</span>
@@ -626,14 +697,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className="space-y-3">
               <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><HardDrive size={12} /> {language === 'it' ? 'Memoria' : 'Storage'}</label>{!isReadOnly && <button onClick={handleAddStorage} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
               {storages.map((storage, index) => (
-                <div key={index} className={`flex flex-col gap-2 rounded-xl ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'} p-4 border`}>
-                  <div className="flex justify-between items-center border-b border-gray-500/10 pb-2 mb-2">
-                      <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div key={index} className={`rounded-xl overflow-hidden border ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'}`}>
+                   {/* Header */}
+                   <div className={`px-4 py-2 flex justify-between items-center border-b ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-200/50 border-gray-200'}`}>
+                      <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-800'}`}>
                           {language === 'it' ? `Variante ${index + 1}` : `Variant ${index + 1}`}
                       </span>
-                      {!isReadOnly && storages.length > 1 && <button onClick={() => handleRemoveStorage(index)} className="text-red-400 hover:text-red-500"><Trash2 size={14} /></button>}
-                  </div>
-                  <div className="flex flex-col md:flex-row gap-3">
+                      {!isReadOnly && storages.length > 1 && <button onClick={() => handleRemoveStorage(index)} className="text-red-400 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10"><Trash2 size={14} /></button>}
+                   </div>
+
+                  <div className="p-4 flex flex-col md:flex-row gap-3">
                      <div className="flex-1 flex gap-2 min-w-0">
                         <input type="text" value={storage.amount} onChange={(e) => updateStorage(index, 'amount', e.target.value)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none ${inputBg}`} placeholder="256" />
                         <div className="w-20 flex-shrink-0"><UnitSelector value={storage.unit} onChange={(val) => updateStorage(index, 'unit', val)} isReadOnly={isReadOnly} isDark={isDark} /></div>
@@ -643,24 +716,31 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 </div>
               ))}
             </div>
-          </section>
+          </CollapsibleSection>
 
           {/* Cameras Section */}
-          <section className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2"><Aperture className="text-red-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Fotocamere' : 'Cameras'}</h3></div>
-              {!isReadOnly && <button onClick={handleAddCamera} className="text-xs font-bold text-pairon-mint flex items-center gap-1"><Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}</button>}
-            </div>
+          <CollapsibleSection
+            icon={<Aperture className="text-red-400" size={20} />}
+            title={language === 'it' ? 'Fotocamere' : 'Cameras'}
+            isDark={isDark}
+            action={!isReadOnly ? (
+               <button onClick={handleAddCamera} className="text-xs font-bold text-pairon-mint flex items-center gap-1 p-2 hover:bg-pairon-mint/10 rounded-lg transition-colors">
+                 <Plus size={14} /> {language === 'it' ? 'Aggiungi' : 'Add'}
+               </button>
+            ) : undefined}
+          >
             <div className="space-y-4">
                {cameras.map((cam, index) => (
-                 <div key={index} className={`p-4 rounded-2xl border flex flex-col gap-3 relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                    <div className="flex justify-between items-center border-b border-gray-500/10 pb-2">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                 <div key={index} className={`rounded-2xl border overflow-hidden ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                    {/* Header */}
+                   <div className={`px-4 py-3 flex justify-between items-center border-b ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-200/50 border-gray-200'}`}>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-800'}`}>
                              {language === 'it' ? `Obiettivo ${index + 1}` : `Lens ${index + 1}`}
                         </span>
-                        {!isReadOnly && cameras.length > 1 && <button onClick={() => handleRemoveCamera(index)} className="text-red-400 hover:text-red-500"><Trash2 size={16} /></button>}
+                        {!isReadOnly && cameras.length > 1 && <button onClick={() => handleRemoveCamera(index)} className="text-red-400 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10"><Trash2 size={16} /></button>}
                     </div>
-                    <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+
+                    <div className="p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
                         <div className="flex-1">
                             <SmartSelector label={language === 'it' ? 'Obiettivo' : 'Lens'} value={cam.type} onChange={(val) => updateCamera(index, 'type', val)} optionsCategory="cameraTypes" defaultOptions={DEFAULT_CAMERA_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
                         </div>
@@ -694,12 +774,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                   <button type="button" onClick={() => !isReadOnly && updateVideo('hasDolbyVision', !videoSettings.hasDolbyVision)} className={`px-4 py-2 rounded-lg text-sm font-bold border ${videoSettings.hasDolbyVision ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-500')}`}>Dolby</button>
                </div>
             </div>
-          </section>
+          </CollapsibleSection>
 
           {/* Battery Section */}
-          <section className="space-y-6">
-             <div className="flex items-center gap-2"><BatteryMedium className="text-green-500" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Batteria' : 'Battery'}</h3></div>
-             
+          <CollapsibleSection
+            icon={<BatteryMedium className="text-green-500" size={20} />}
+            title={language === 'it' ? 'Batteria' : 'Battery'}
+            isDark={isDark}
+          >
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                    <label className={`block text-xs font-bold uppercase ${labelColor}`}>{language === 'it' ? 'Capacità (mAh)' : 'Capacity (mAh)'}</label>
@@ -754,12 +836,14 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                    )}
                 </div>
              </div>
-          </section>
+          </CollapsibleSection>
           
           {/* Software Section */}
-          <section className="space-y-6">
-             <div className="flex items-center gap-2"><AppWindow className="text-purple-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Software & OS</h3></div>
-             
+          <CollapsibleSection
+             icon={<AppWindow className="text-purple-400" size={20} />}
+             title="Software & OS"
+             isDark={isDark}
+          >
              <SmartSelector label={language === 'it' ? 'Versione OS' : 'OS Version'} value={os} onChange={setOs} optionsCategory="osVersions" defaultOptions={DEFAULT_OS_VERSIONS} isReadOnly={isReadOnly} isDark={isDark} language={language} />
              
              {/* Custom UI */}
@@ -789,9 +873,9 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                    <input type="number" value={securityPatches} onChange={(e) => setSecurityPatches(e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="5" />
                 </div>
              </div>
-          </section>
+          </CollapsibleSection>
 
-          {/* Availability & Price */}
+          {/* Availability & Price - Not collapsible as per request */}
           <section className="space-y-6">
              <div className="flex items-center gap-2"><CalendarDays className="text-orange-400" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{language === 'it' ? 'Disponibilità & Prezzo' : 'Availability & Price'}</h3></div>
              
@@ -820,7 +904,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
              </div>
           </section>
 
-          {/* Pros & Cons Section */}
+          {/* Pros & Cons Section - Not collapsible as per request */}
           <section className="space-y-6">
              <div className="flex items-center gap-2"><ThumbsUp className="text-pairon-mint" size={20} /><h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Pro & Contro</h3></div>
 
