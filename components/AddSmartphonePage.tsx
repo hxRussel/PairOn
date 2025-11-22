@@ -474,7 +474,11 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                 const [width = '', height = ''] = display.resolution.toLowerCase().replace('pixel', '').split('x').map(s => s.trim());
                 return (
                 <div key={index} className={`p-5 rounded-2xl border relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                   {!isReadOnly && displays.length > 1 && <button onClick={() => handleRemoveDisplay(index)} className="absolute top-4 right-4 text-red-400"><Trash2 size={16} /></button>}
+                   <div className="flex justify-between items-center mb-4 border-b border-gray-500/10 pb-2">
+                       <span className={`font-bold text-sm uppercase tracking-wider ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Display {index + 1}</span>
+                       {!isReadOnly && displays.length > 1 && <button onClick={() => handleRemoveDisplay(index)} className="text-red-400 hover:text-red-500"><Trash2 size={16} /></button>}
+                   </div>
+                   
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <SmartSelector label={language === 'it' ? 'Tecnologia' : 'Technology'} value={display.type} onChange={(val) => updateDisplay(index, 'type', val)} optionsCategory="displayTypes" defaultOptions={DEFAULT_DISPLAY_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
                       
@@ -483,12 +487,39 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                          <input type="text" value={display.size} onChange={(e) => updateDisplay(index, 'size', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder='6.7"' />
                       </div>
                       
+                      {/* Resolution Split Inputs */}
                       <div className="col-span-1 md:col-span-2">
-                        <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><Monitor size={12} /> {language === 'it' ? 'Risoluzione (Pixel)' : 'Resolution (Pixel)'}</label>
-                        <div className="flex gap-2 items-center">
-                           <input type="text" value={width} onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none text-center ${inputBg}`} placeholder="1290" />
-                            <span className="opacity-50 font-bold">X</span>
-                           <input type="text" value={height} onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none text-center ${inputBg}`} placeholder="2796" />
+                        <label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1 mb-3`}>
+                            <Monitor size={12} /> {language === 'it' ? 'Risoluzione (Pixel)' : 'Resolution (Pixel)'}
+                        </label>
+                        <div className="flex items-end gap-4">
+                           <div className="flex-1">
+                             <label className={`block text-[10px] font-bold text-center mb-1.5 opacity-70 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                                {language === 'it' ? 'Orizzontale' : 'Horizontal'}
+                             </label>
+                             <input 
+                                type="text" 
+                                value={width} 
+                                onChange={(e) => updateDisplay(index, 'resolution', `${e.target.value} x ${height}`)} 
+                                disabled={isReadOnly} 
+                                className={`w-full p-3 rounded-xl border outline-none text-center ${inputBg}`} 
+                                placeholder="1080" 
+                             />
+                           </div>
+                           <div className={`pb-3 font-bold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>X</div>
+                           <div className="flex-1">
+                             <label className={`block text-[10px] font-bold text-center mb-1.5 opacity-70 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                                {language === 'it' ? 'Verticale' : 'Vertical'}
+                             </label>
+                             <input 
+                                type="text" 
+                                value={height} 
+                                onChange={(e) => updateDisplay(index, 'resolution', `${width} x ${e.target.value}`)} 
+                                disabled={isReadOnly} 
+                                className={`w-full p-3 rounded-xl border outline-none text-center ${inputBg}`} 
+                                placeholder="2400" 
+                             />
+                           </div>
                         </div>
                       </div>
                       
@@ -571,10 +602,22 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className="space-y-3">
               <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor}`}>RAM</label>{!isReadOnly && <button onClick={handleAddRam} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
               {rams.map((ram, index) => (
-                <div key={index} className={`flex flex-col md:flex-row gap-3 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} p-3`}>
-                  <div className="relative flex-1"><input type="text" value={ram.amount} onChange={(e) => updateRam(index, 'amount', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none pl-4 ${inputBg}`} placeholder="12" /><span className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold ${labelColor}`}>GB</span></div>
-                  <div className="flex-1"><SmartSelector label={language === 'it' ? 'Tipo' : 'Type'} value={ram.type} onChange={(val) => updateRam(index, 'type', val)} optionsCategory="ramTypes" defaultOptions={DEFAULT_RAM_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
-                  {!isReadOnly && rams.length > 1 && <button onClick={() => handleRemoveRam(index)} className="p-3 text-red-400 self-end md:self-center"><Trash2 size={18} /></button>}
+                <div key={index} className={`flex flex-col gap-2 rounded-xl ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'} p-4 border`}>
+                  <div className="flex justify-between items-center border-b border-gray-500/10 pb-2 mb-2">
+                      <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {language === 'it' ? `Variante ${index + 1}` : `Variant ${index + 1}`}
+                      </span>
+                      {!isReadOnly && rams.length > 1 && <button onClick={() => handleRemoveRam(index)} className="text-red-400 hover:text-red-500"><Trash2 size={14} /></button>}
+                  </div>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <div className="relative flex-1">
+                        <input type="text" value={ram.amount} onChange={(e) => updateRam(index, 'amount', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none pl-4 ${inputBg}`} placeholder="12" />
+                        <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold ${labelColor}`}>GB</span>
+                    </div>
+                    <div className="flex-1">
+                        <SmartSelector label={language === 'it' ? 'Tipo' : 'Type'} value={ram.type} onChange={(val) => updateRam(index, 'type', val)} optionsCategory="ramTypes" defaultOptions={DEFAULT_RAM_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -583,13 +626,20 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             <div className="space-y-3">
               <div className="flex justify-between items-end"><label className={`block text-xs font-bold uppercase ${labelColor} flex items-center gap-1`}><HardDrive size={12} /> {language === 'it' ? 'Memoria' : 'Storage'}</label>{!isReadOnly && <button onClick={handleAddStorage} className="text-xs text-pairon-mint font-bold"><Plus size={12} /></button>}</div>
               {storages.map((storage, index) => (
-                <div key={index} className={`flex flex-col md:flex-row gap-3 rounded-xl ${isDark ? 'bg-white/5' : 'bg-gray-50'} p-3`}>
-                   <div className="flex-1 flex gap-2 min-w-0">
-                      <input type="text" value={storage.amount} onChange={(e) => updateStorage(index, 'amount', e.target.value)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none ${inputBg}`} placeholder="256" />
-                      <div className="w-20 flex-shrink-0"><UnitSelector value={storage.unit} onChange={(val) => updateStorage(index, 'unit', val)} isReadOnly={isReadOnly} isDark={isDark} /></div>
-                   </div>
-                   <div className="flex-1"><SmartSelector label={language === 'it' ? 'Tipo' : 'Type'} value={storage.type} onChange={(val) => updateStorage(index, 'type', val)} optionsCategory="storageTypes" defaultOptions={DEFAULT_STORAGE_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
-                   {!isReadOnly && storages.length > 1 && <button onClick={() => handleRemoveStorage(index)} className="p-3 text-red-400 self-end md:self-center"><Trash2 size={18} /></button>}
+                <div key={index} className={`flex flex-col gap-2 rounded-xl ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'} p-4 border`}>
+                  <div className="flex justify-between items-center border-b border-gray-500/10 pb-2 mb-2">
+                      <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {language === 'it' ? `Variante ${index + 1}` : `Variant ${index + 1}`}
+                      </span>
+                      {!isReadOnly && storages.length > 1 && <button onClick={() => handleRemoveStorage(index)} className="text-red-400 hover:text-red-500"><Trash2 size={14} /></button>}
+                  </div>
+                  <div className="flex flex-col md:flex-row gap-3">
+                     <div className="flex-1 flex gap-2 min-w-0">
+                        <input type="text" value={storage.amount} onChange={(e) => updateStorage(index, 'amount', e.target.value)} disabled={isReadOnly} className={`flex-1 min-w-0 p-3 rounded-xl border outline-none ${inputBg}`} placeholder="256" />
+                        <div className="w-20 flex-shrink-0"><UnitSelector value={storage.unit} onChange={(val) => updateStorage(index, 'unit', val)} isReadOnly={isReadOnly} isDark={isDark} /></div>
+                     </div>
+                     <div className="flex-1"><SmartSelector label={language === 'it' ? 'Tipo' : 'Type'} value={storage.type} onChange={(val) => updateStorage(index, 'type', val)} optionsCategory="storageTypes" defaultOptions={DEFAULT_STORAGE_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -603,11 +653,25 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
             </div>
             <div className="space-y-4">
                {cameras.map((cam, index) => (
-                 <div key={index} className={`p-4 rounded-2xl border flex flex-col md:flex-row gap-4 items-stretch md:items-center relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
-                    {!isReadOnly && cameras.length > 1 && <button onClick={() => handleRemoveCamera(index)} className="absolute top-2 right-2 text-red-400"><Trash2 size={16} /></button>}
-                    <div className="flex-1"><SmartSelector label={language === 'it' ? 'Obiettivo' : 'Lens'} value={cam.type} onChange={(val) => updateCamera(index, 'type', val)} optionsCategory="cameraTypes" defaultOptions={DEFAULT_CAMERA_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} /></div>
-                    <div className="w-full md:w-24"><label className={`block text-xs font-bold uppercase ${labelColor}`}>MP</label><input type="text" value={cam.megapixels} onChange={(e) => updateCamera(index, 'megapixels', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="50" /></div>
-                    <div className="flex items-end"><button type="button" onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)} className={`w-full md:w-auto px-4 py-2.5 rounded-xl text-sm font-bold border ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-500')}`}>OIS</button></div>
+                 <div key={index} className={`p-4 rounded-2xl border flex flex-col gap-3 relative ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="flex justify-between items-center border-b border-gray-500/10 pb-2">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                             {language === 'it' ? `Obiettivo ${index + 1}` : `Lens ${index + 1}`}
+                        </span>
+                        {!isReadOnly && cameras.length > 1 && <button onClick={() => handleRemoveCamera(index)} className="text-red-400 hover:text-red-500"><Trash2 size={16} /></button>}
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                        <div className="flex-1">
+                            <SmartSelector label={language === 'it' ? 'Obiettivo' : 'Lens'} value={cam.type} onChange={(val) => updateCamera(index, 'type', val)} optionsCategory="cameraTypes" defaultOptions={DEFAULT_CAMERA_TYPES} isReadOnly={isReadOnly} isDark={isDark} language={language} />
+                        </div>
+                        <div className="w-full md:w-24">
+                            <label className={`block text-xs font-bold uppercase ${labelColor}`}>MP</label>
+                            <input type="text" value={cam.megapixels} onChange={(e) => updateCamera(index, 'megapixels', e.target.value)} disabled={isReadOnly} className={`w-full p-3 rounded-xl border outline-none ${inputBg}`} placeholder="50" />
+                        </div>
+                        <div className="flex items-end">
+                            <button type="button" onClick={() => !isReadOnly && updateCamera(index, 'hasOis', !cam.hasOis)} className={`w-full md:w-auto px-4 py-2.5 rounded-xl text-sm font-bold border ${cam.hasOis ? 'bg-pairon-mint text-pairon-obsidian' : (isDark ? 'border-white/10 text-gray-400' : 'border-gray-300 text-gray-500')}`}>OIS</button>
+                        </div>
+                    </div>
                  </div>
                ))}
             </div>
