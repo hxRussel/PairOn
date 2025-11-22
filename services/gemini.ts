@@ -4,30 +4,54 @@ import { Language } from '../types';
 
 // Helper to get the client with prioritized environment variable checks
 const getAiClient = () => {
+  let key = '';
+
   console.log("Gemini Service: Initializing client...");
 
-  // 1. Try VITE_API_KEY (Standard for Vite/React apps)
-  // 2. Try process.env.VITE_API_KEY (Sometimes populated by Vercel)
-  // 3. Fallback to process.env.API_KEY (Standard Node)
-  // @ts-ignore
-  const key = import.meta.env?.VITE_API_KEY || process.env?.VITE_API_KEY || process.env?.API_KEY;
+  // 1. Try VITE_API_KEY (Standard for Vite/React apps) via import.meta.env
+  try {
+    // @ts-ignore
+    if (import.meta && import.meta.env && import.meta.env.VITE_API_KEY) {
+      // @ts-ignore
+      key = import.meta.env.VITE_API_KEY;
+      console.log("Gemini Service: Found VITE_API_KEY in import.meta.env");
+    }
+  } catch (e) {
+    console.warn("Gemini Service: Error checking import.meta", e);
+  }
+
+  // 2. Fallback to process.env (Vercel Serverless / Node context)
+  if (!key) {
+    try {
+      if (process.env.VITE_API_KEY) {
+        key = process.env.VITE_API_KEY;
+        console.log("Gemini Service: Found VITE_API_KEY in process.env");
+      } else if (process.env.API_KEY) {
+        key = process.env.API_KEY;
+        console.log("Gemini Service: Found API_KEY in process.env");
+      }
+    } catch (e) {
+      console.warn("Gemini Service: Error checking process.env", e);
+    }
+  }
   
   if (!key) {
     console.error("Gemini Service CRITICAL ERROR: API Key is missing.");
     console.warn("Troubleshooting:");
     console.warn("1. Vercel: Ensure you have a variable named 'VITE_API_KEY' in Project Settings.");
     console.warn("2. Local: Ensure you have 'VITE_API_KEY=...' in your .env file.");
-    console.log("Environment Check:", {
+    console.log("Environment Debug Info:", {
       // @ts-ignore
-      hasMetaEnv: !!import.meta.env?.VITE_API_KEY,
+      hasMetaEnv: typeof import.meta !== 'undefined' && !!import.meta.env,
       // @ts-ignore
-      hasProcessVite: !!process.env?.VITE_API_KEY,
-      // @ts-ignore
-      hasProcessStd: !!process.env?.API_KEY
+      hasViteKeyInMeta: typeof import.meta !== 'undefined' && !!import.meta.env?.VITE_API_KEY,
+      hasProcess: typeof process !== 'undefined',
+      hasViteKeyInProcess: typeof process !== 'undefined' && !!process.env?.VITE_API_KEY,
+      hasApiKeyInProcess: typeof process !== 'undefined' && !!process.env?.API_KEY
     });
     throw new Error("API Key missing. Please check VITE_API_KEY configuration in Vercel.");
   } else {
-    console.log("Gemini Service: API Key found and loaded.");
+    console.log("Gemini Service: API Key loaded successfully.");
   }
 
   return new GoogleGenAI({ apiKey: key });

@@ -387,9 +387,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (userSettings.isPremium) return new Set<string>();
     
     const ids = new Set<string>();
+    // Calculate how many phones are over the limit
     const excessCount = Math.max(0, savedPhones.length - FREE_PLAN_LIMIT);
     
-    // Lock the first 'excessCount' items (which are the newest ones)
+    // Lock the first 'excessCount' items (which are the newest ones due to sort order)
+    // This satisfies "gli ultimi dispositivi in eccesso in ordine cronologico"
     for (let i = 0; i < excessCount; i++) {
       if (savedPhones[i].id) {
         ids.add(savedPhones[i].id!);
@@ -1185,7 +1187,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   )}
                 </div>
 
-                {/* Lock Overlay */}
+                {/* Lock Overlay - Covers content but keeps trash button accessible via z-index */}
                 {isLocked && (
                   <div className="absolute inset-0 bg-black/70 z-20 flex flex-col items-center justify-center backdrop-blur-[2px] p-4 text-center">
                      <div className="bg-white/10 p-4 rounded-full mb-3 backdrop-blur-md border border-white/10 shadow-lg">
@@ -1198,7 +1200,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 )}
                 
-                {/* HEADER: Brand & Actions - Moved out of content container to avoid opacity/pointer issues when locked. Z-30 places it above lock overlay. */}
+                {/* HEADER: Brand & Actions - Z-30 places it ABOVE lock overlay so trash works */}
                 <div className="absolute top-0 left-0 right-0 p-5 flex justify-between items-start z-30 pointer-events-none">
                     <span className={`px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-medium border border-white/10 ${isLocked ? 'opacity-40' : ''}`}>
                       {phone.brand}
@@ -1221,7 +1223,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </button>
                          </>
                        )}
-                      {/* Trash Button - Always Visible */}
+                      {/* Trash Button - Always Visible and Clickable */}
                       <button 
                         onClick={(e) => handleDeleteClick(e, phone)}
                         className="p-2 hover:bg-red-500/80 rounded-full transition-colors text-red-300 hover:text-white"
@@ -1231,8 +1233,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                 </div>
 
-                {/* Content Container */}
-                <div className={`absolute inset-0 p-5 flex flex-col justify-between text-white ${isLocked ? 'opacity-30 pointer-events-none' : ''}`}>
+                {/* Content Container - Blurred/Hidden when locked */}
+                <div className={`absolute inset-0 p-5 flex flex-col justify-between text-white ${isLocked ? 'opacity-0 pointer-events-none' : ''}`}>
                   
                   {/* Name - Positioned with margin to clear the absolute header */}
                   <div className="mt-10">
