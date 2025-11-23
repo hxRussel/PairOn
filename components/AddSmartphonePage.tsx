@@ -138,7 +138,7 @@ const CollapsibleSection: React.FC<{
   action?: React.ReactNode;
   isDark: boolean;
 }> = ({ icon, title, children, action, isDark }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <section className="space-y-6">
