@@ -109,7 +109,7 @@ const AiAdvisor: React.FC<AiAdvisorProps> = ({ savedPhones, language, isDark, us
             charging: p.battery?.wiredCharging,
             display: p.displays?.[0] ? `${p.displays[0].size} ${p.displays[0].type} ${p.displays[0].refreshRate}` : 'N/A',
             cameras: p.cameras?.map(c => `${c.type} ${c.megapixels}`).join(', '),
-            price: p.price,
+            price: Array.isArray(p.price) ? p.price.join(', ') : p.price,
             launch: p.launchDate
           }
         }));

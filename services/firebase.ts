@@ -223,7 +223,7 @@ export interface PhoneData {
 
   // Availability
   launchDate: string;
-  price: string;
+  price: string | string[]; // Updated to support multiple prices
 
   // Pros & Cons
   pros?: string[];

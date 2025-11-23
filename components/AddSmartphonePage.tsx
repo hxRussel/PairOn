@@ -231,7 +231,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
 
   // Availability
   const [launchDate, setLaunchDate] = useState('');
-  const [price, setPrice] = useState('');
+  const [prices, setPrices] = useState<string[]>(['']); // Updated to array
 
   const [pros, setPros] = useState<string[]>([]);
   const [cons, setCons] = useState<string[]>([]);
@@ -304,7 +304,18 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       setSecurityPatches(initialData.securityPatches || '');
 
       setLaunchDate(initialData.launchDate || '');
-      setPrice(initialData.price || '');
+      
+      // Handle Price (String or Array)
+      if (initialData.price) {
+        if (Array.isArray(initialData.price)) {
+           setPrices(initialData.price);
+        } else {
+           setPrices([initialData.price]);
+        }
+      } else {
+        setPrices(['']);
+      }
+
       setPros(initialData.pros || []);
       setCons(initialData.cons || []);
     }
@@ -368,6 +379,16 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
     setCameras(newCameras);
   };
 
+  // Price Handlers
+  const handleAddPrice = () => !isReadOnly && setPrices([...prices, '']);
+  const handleRemovePrice = (index: number) => !isReadOnly && prices.length > 1 && setPrices(prices.filter((_, i) => i !== index));
+  const updatePrice = (index: number, value: string) => {
+    if (isReadOnly) return;
+    const newPrices = [...prices];
+    newPrices[index] = value;
+    setPrices(newPrices);
+  };
+
   const updateVideo = (field: keyof VideoSettings, value: any) => !isReadOnly && setVideoSettings({ ...videoSettings, [field]: value });
   
   // Pros & Cons Handlers
@@ -417,6 +438,10 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
         uploadedImageUrl = await uploadSmartphoneImage(auth.currentUser.uid, imageFile);
       } catch (error) { console.error("Image upload failed", error); }
     }
+    
+    // Filter empty prices but keep at least one if all are empty
+    let finalPrices = prices.filter(p => p.trim() !== '');
+    if (finalPrices.length === 0) finalPrices = [''];
 
     const phoneData: Omit<PhoneData, 'id'> = {
       brand, model, chip, ipRating, ram: rams, storage: storages, displays, cameras, video: videoSettings,
@@ -435,7 +460,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
       haptics,
       os, hasCustomUi, customUi: hasCustomUi ? customUi : '', 
       majorUpdates, securityPatches, 
-      launchDate, price, pros, cons,
+      launchDate, price: finalPrices, pros, cons,
       color: initialData?.color || generateRandomGradient(), 
       imageUrl: uploadedImageUrl,
     };
@@ -560,7 +585,7 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                           </label>
                           <div className="flex items-end gap-4">
                              <div className="flex-1">
-                               <label className={`block text-[10px] font-bold text-center mb-1.5 uppercase tracking-wider opacity-80 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                               <label className={`block text-xs font-bold text-center mb-1.5 uppercase tracking-wider opacity-80 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                                   {language === 'it' ? 'Orizzontale (Larghezza)' : 'Horizontal (Width)'}
                                </label>
                                <input 
@@ -894,11 +919,45 @@ const AddSmartphonePage: React.FC<AddSmartphonePageProps> = ({
                    </div>
                 </div>
 
+                {/* Updated Price Section with Multiple Entries */}
                 <div>
-                   <label className={`block text-xs font-bold uppercase ${labelColor} mb-1`}>{language === 'it' ? 'Prezzo' : 'Price'}</label>
-                   <div className="relative">
-                      <CurrencyIcon />
-                      <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} disabled={isReadOnly} className={`w-full p-3 pl-10 rounded-xl border outline-none ${inputBg}`} placeholder="999" />
+                   <div className="flex justify-between items-end mb-1">
+                      <label className={`block text-xs font-bold uppercase ${labelColor}`}>{language === 'it' ? 'Prezzo' : 'Price'}</label>
+                      {!isReadOnly && (
+                        <button onClick={handleAddPrice} className="text-xs text-pairon-mint font-bold flex items-center gap-1">
+                           <Plus size={12} />
+                        </button>
+                      )}
+                   </div>
+                   
+                   <div className="space-y-3">
+                      {prices.map((priceVal, index) => (
+                        <div key={index} className={`rounded-xl overflow-hidden border ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-200'}`}>
+                           {/* Variant Header - Only show if more than 1 price or if explicit label needed */}
+                           <div className={`px-4 py-2 flex justify-between items-center border-b ${isDark ? 'bg-white/5 border-white/5' : 'bg-gray-200/50 border-gray-200'}`}>
+                               <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                                   {language === 'it' ? `Variante ${index + 1}` : `Variant ${index + 1}`}
+                               </span>
+                               {!isReadOnly && prices.length > 1 && (
+                                 <button onClick={() => handleRemovePrice(index)} className="text-red-400 hover:text-red-500 p-1 rounded-full hover:bg-red-500/10">
+                                   <Trash2 size={14} />
+                                 </button>
+                               )}
+                           </div>
+                           
+                           <div className="relative p-2">
+                              <CurrencyIcon />
+                              <input 
+                                type="text" 
+                                value={priceVal} 
+                                onChange={(e) => updatePrice(index, e.target.value)} 
+                                disabled={isReadOnly} 
+                                className={`w-full p-3 pl-10 rounded-xl outline-none bg-transparent`} 
+                                placeholder="999" 
+                              />
+                           </div>
+                        </div>
+                      ))}
                    </div>
                 </div>
              </div>

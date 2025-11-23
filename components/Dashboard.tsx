@@ -71,6 +71,44 @@ const parseNumericValue = (str: string | undefined): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
+// Helper to handle both string and string[] for price
+const getPriceValue = (price: string | string[] | undefined): number => {
+  if (!price) return 0;
+  if (Array.isArray(price)) {
+    if (price.length === 0) return 0;
+    // Find min value for sorting
+    let minVal = Infinity;
+    for (const p of price) {
+        const val = parseNumericValue(p);
+        if (val > 0 && val < minVal) minVal = val;
+    }
+    return minVal === Infinity ? 0 : minVal;
+  }
+  return parseNumericValue(price);
+};
+
+const getDisplayPrice = (price: string | string[] | undefined): string => {
+   if (!price) return '-';
+   if (Array.isArray(price)) {
+      if (price.length === 0) return '-';
+      if (price.length === 1) return price[0];
+      
+      // Find lowest price to display
+      let minVal = Infinity;
+      let minStr = price[0];
+      
+      for (const p of price) {
+          const val = parseNumericValue(p);
+          if (val > 0 && val < minVal) {
+              minVal = val;
+              minStr = p;
+          }
+      }
+      return `${minStr} +`;
+   }
+   return price;
+};
+
 const DeleteConfirmationModal: React.FC<{ 
   isOpen: boolean; 
   onClose: () => void; 
@@ -546,8 +584,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             valB = b.launchDate ? new Date(b.launchDate).getTime() : 0;
             break;
           case 'price':
-            valA = parseNumericValue(a.price);
-            valB = parseNumericValue(b.price);
+            valA = getPriceValue(a.price);
+            valB = getPriceValue(b.price);
             break;
           case 'battery':
             valA = parseNumericValue(a.battery?.capacity);
@@ -914,7 +952,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <div className="flex items-center gap-3">
                                <Banknote size={16} className="text-yellow-400" />
                                <span className="truncate font-medium opacity-80 font-mono">
-                                 {phone.price ? `${userSettings.currency === 'USD' ? '$' : '€'} ${phone.price}` : '-'}
+                                 {getDisplayPrice(phone.price) ? `${userSettings.currency === 'USD' ? '$' : '€'} ${getDisplayPrice(phone.price)}` : '-'}
                                </span>
                             </div>
                             
@@ -1282,7 +1320,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                           {language === 'it' ? 'Prezzo' : 'Price'}
                         </span>
                         <span className="text-xl font-bold text-pairon-mint font-mono">
-                          {phone.price ? `${currencySymbol} ${phone.price}` : '-'}
+                          {getDisplayPrice(phone.price) ? `${currencySymbol} ${getDisplayPrice(phone.price)}` : '-'}
                         </span>
                     </div>
 

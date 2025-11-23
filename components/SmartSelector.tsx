@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Search, Plus, Check } from 'lucide-react';
 import { auth, addCustomOption, subscribeToCustomOptions, CustomOptions } from '../services/firebase';
@@ -73,6 +74,9 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
   const filteredOptions = allOptions.filter(opt => 
     opt.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  // Check if the exact term exists in the full list (case insensitive)
+  const exactMatchExists = allOptions.some(opt => opt.toLowerCase() === searchTerm.trim().toLowerCase());
 
   const handleSelect = (opt: string) => {
     onChange(opt);
@@ -155,10 +159,11 @@ const SmartSelector: React.FC<SmartSelectorProps> = ({
 
             {/* List */}
             <div className="flex-1 overflow-y-auto p-2">
-              {filteredOptions.length === 0 && searchTerm && (
+              {/* Show ADD button if searchTerm is not empty AND exact match is not in the list */}
+              {searchTerm && !exactMatchExists && (
                  <button 
                     onClick={handleAddNew}
-                    className="w-full p-4 rounded-xl flex items-center gap-3 text-pairon-mint hover:bg-pairon-mint/10 transition-colors text-left group"
+                    className="w-full p-4 rounded-xl flex items-center gap-3 text-pairon-mint hover:bg-pairon-mint/10 transition-colors text-left group mb-2 border border-pairon-mint/20"
                  >
                     <div className="w-8 h-8 rounded-full bg-pairon-mint/20 flex items-center justify-center group-hover:bg-pairon-mint group-hover:text-black transition-colors">
                        <Plus size={16} />
